@@ -13,16 +13,15 @@
 
 ## ✨ Features
 
-- **⚡ Fast Parallel Scanning** — Bounded worker-pool directory walk (8 concurrent workers), Dirent-based stat calls, batch I/O to minimize disk latency
-- **🗑️ Safe Deletion Pipeline** — Cascading fallback: `unlink` → attribute-strip → `shell del` → reboot-schedule, with 12-second timeout guard
-- **🛡️ Trusted Users Badge** — Live community counter showing how many unique devices trust XCoreTech, powered by Google Sheets + Apps Script
-- **📊 Session Impact Cards** — Real-time stats: total bytes freed, number of runs, average clean time, estimated speed boost
-- **🔄 Auto-Clean on Startup** — Optional Windows registry integration to run a silent clean at login (`--autoclean` flag)
-- **📍 System Tray** — Minimizes to tray instead of closing; single-instance lock prevents duplicates
-- **🔒 Context Isolation** — `contextIsolation: true`, `nodeIntegration: false`, secure preload bridge
-- **🔁 Auto-Update** — `electron-updater` + GitHub Releases: silent background download, amber banner notification, one-click restart-and-install
-- **💾 Zero Cache / Fully Stateless** — No localStorage, no file-based cache. Every launch is a clean slate
-- **🖥️ 32-bit & 64-bit Builds** — Single NSIS installer auto-selects the correct arch
+- **⚡ Fast Parallel Scanning** — Bounded worker-pool directory walk (8 concurrent workers), Dirent-based stat calls, batch I/O to minimize disk latency.
+- **🗑️ Safe Deletion Pipeline** — Cascading fallback: `unlink` → attribute-strip → `shell del` → reboot-schedule, with 12-second timeout guard.
+- **🤖 Autonomous Background Maintenance** — Fully silent maintenance cycles triggered on system boot, including auto-scan and auto-clean without user intervention.
+- **🛡️ No Administrator Required** — Runs entirely at the user level (`asInvoker`). No UAC prompts during installation or daily operation.
+- **📍 Persistent System Tray** — Minimizes to the system tray for constant availability. Behaves like a native background service with a single-instance lock.
+- **📊 Real-time Analytics** — Granular event tracking (boot, scan, clean, crash) logged to Google Sheets for impact monitoring.
+- **🔒 Secure Architecture** — Full `contextIsolation`, disabled hardware acceleration, and V8 heap tuning for ultra-low memory footprint (~40-60MB).
+- **🔄 Silent Auto-Updates** — Background update delivery via GitHub Releases with one-click installation.
+- **🖥️ Universal Windows Support** — Single installer for both 32-bit and 64-bit Windows 10/11 environments.
 
 ---
 
@@ -31,19 +30,19 @@
 ```
 xcoretechelectron/
 ├── index.js          # Entry point (requires main.js)
-├── main.js           # Electron main process — IPC, window, tray, scan/clean orchestration
+├── main.js           # Electron main process — Lifecycle, Tray, Automation, IPC
 ├── preload.js        # Secure context bridge (contextIsolation)
-├── renderer.js       # UI logic — fully stateless, RAF-throttled, fire-and-forget analytics
+├── renderer.js       # UI logic — Stateless React-like rendering, RAF-throttled
 ├── scanner.js        # Parallel directory walker — 8-worker bounded pool
 ├── cleaner.js        # Deletion pipeline — native → shell → reboot fallback
-├── analytics.js      # Google Sheets analytics — fire-and-forget, no queue
-├── systemInfo.js     # OS/CPU/RAM snapshot (os module)
-├── location.js       # IP geolocation with file cache
-├── crashHandler.js   # Uncaught exception handler
-├── utils.js          # Registry auto-start, formatBytes, debounce
-├── index.html        # App UI shell + embedded CSS
-├── styles.css        # Additional styles
-└── assets/           # App icons (ICO + PNG)
+├── analytics.js      # Google Sheets analytics — Redirect-following, fire-and-forget
+├── updater.js        # Silent auto-updater (electron-updater)
+├── systemInfo.js     # OS/CPU/RAM snapshot logic
+├── location.js       # IP-based geolocation with local caching
+├── crashHandler.js   # Global error capture and reporting
+├── utils.js          # Registry management, formatting, and path validation
+├── index.html        # App UI shell (Vanilla HTML/CSS)
+└── assets/           # App icons and branding
 ```
 
 ---
@@ -59,7 +58,7 @@ xcoretechelectron/
 ### Install
 
 ```bash
-git clone https://github.com/yourname/xcoretechelectron.git
+git clone https://github.com/mhmdrameez/xcoretechelectron.git
 cd xcoretechelectron
 npm install
 ```
@@ -70,7 +69,7 @@ npm install
 npm start
 ```
 
-Starts Electron with V8 memory cap (`--max-old-space-size=128 --optimize-for-size`) and GPU sandbox disabled for lowest resource usage.
+Starts Electron with optimized V8 flags (`--max-old-space-size=96`) for performance testing.
 
 ---
 
@@ -83,15 +82,7 @@ npm run dist
 ```
 
 Output: `dist/XCoreTech Disk Cleaner Setup 1.0.0.exe`  
-The NSIS installer auto-selects 32-bit or 64-bit based on the user's Windows.
-
-### Unpacked (no installer)
-
-```bash
-npm run pack
-```
-
-Output: `dist/win-unpacked/` (x64) and `dist/win-ia32-unpacked/` (x86)
+The installer is configured for **per-user** installation, requiring no admin rights.
 
 ---
 
@@ -187,27 +178,30 @@ Default paths scanned (Windows):
 
 ---
 
-## 🔐 Security
+## 🔐 Security & Permissions
 
-- `contextIsolation: true` — renderer has no direct Node.js access
-- `nodeIntegration: false` — no global `require` in renderer
-- `sandbox: false` — required for preload, main process remains isolated
-- System path blacklist in `utils.js` — prevents deletion of critical OS directories
-- All IPC calls validated in main process before execution
+- **User-Level Execution**: Configured with `requestedExecutionLevel: asInvoker`. No administrative bypasses are used.
+- **Path Guard**: `isProbablyUnsafeSystemPath` in `utils.js` prevents accidental deletion of critical OS files.
+- **Context Isolation**: Renderer has zero access to Node.js APIs or the file system.
+- **Sandboxing**: Preload bridge strictly validates all IPC communication.
 
 ---
 
-## 🖥️ Auto-Start (Startup Persistence)
+## 🤖 Background Automation
 
-The app can register itself to run at Windows login via the registry:
+XCoreTech is designed to be "set and forget." It automatically registers itself to run at login with specialized flags:
 
-```
-HKCU\Software\Microsoft\Windows\CurrentVersion\Run
-→ XCoreTech Disk Cleaner = "path\to\app.exe --autoclean"
-```
+### Maintenance Sequence
+1. **Boot Launch**: App starts hidden in the tray immediately after system login.
+2. **Auto-Scan**: Begins a silent directory walk to identify junk accumulation.
+3. **Auto-Clean**: If junk is found, it executes the deletion pipeline silently.
+4. **Analytics**: Logs `boot_launch`, `scan_start`, and `cleanup_done` (including bytes freed) to the central dashboard.
 
-Toggle via the **Auto Clean on Startup** checkbox in the UI.  
-When launched with `--autoclean`, the app silently scans + cleans then exits after 700ms.
+### CLI Flags
+| Flag | Description |
+|---|---|
+| `--autoclean` | Triggers the autonomous scan + clean cycle on startup. |
+| `--hidden` | Starts the application minimized to the system tray. |
 
 ---
 
@@ -238,10 +232,9 @@ MIT © XCoreTech
 
 ---
 
-## 👨‍💻 Built With
+## 👨‍💻 Tech Stack
 
-- [Electron](https://electronjs.org/) v22
-- [electron-builder](https://www.electron.build/) v24
-- [axios](https://axios-http.com/) — analytics HTTP
-- Google Apps Script — analytics backend
-- Vanilla HTML/CSS/JS — zero frontend framework overhead
+- **Electron 22** — Core Runtime
+- **Vanilla JS/HTML/CSS** — Zero-framework UI
+- **GitHub Actions** — CI/CD & Releases
+- **Google Apps Script** — Analytics Backend
