@@ -28,6 +28,8 @@ contextBridge.exposeInMainWorld("api", {
   trackEvent: (payload) => ipcRenderer.invoke("analytics:track", payload || {}),
   updateInstall: () => ipcRenderer.invoke("update:install"),
   updateCheck:   () => ipcRenderer.invoke("update:check"),
+  getStartupList:      ()                                          => ipcRenderer.invoke("startup:list"),
+  setStartupEnabled:   (hive, name, approvedKey, regFlag, enable) => ipcRenderer.invoke("startup:setEnabled", { hive, name, approvedKey, regFlag, enable }),
   onScanReset: (fn) => on("scan:reset", fn),
   onScanProgress: (fn) => on("scan:progress", fn),
   onScanDone: (fn) => on("scan:done", fn),

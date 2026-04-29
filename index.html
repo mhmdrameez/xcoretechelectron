@@ -391,6 +391,125 @@
       font-weight: 600;
       line-height: 1;
     }
+
+    /* ── Startup Programs Panel ── */
+    .startupPanel {
+      margin-top: 10px;
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .startupHeader {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      cursor: pointer;
+      user-select: none;
+      border-bottom: 1px solid transparent;
+      transition: background 0.15s;
+    }
+    .startupPanel.open .startupHeader {
+      border-bottom-color: #1e293b;
+    }
+    .startupHeader:hover { background: rgba(255,255,255,0.03); }
+    .startupHeaderLeft { display: flex; align-items: center; gap: 8px; }
+    .startupHeaderLeft span { font-size: 14px; font-weight: bold; }
+    .startupChevron { font-size: 11px; color: #64748b; transition: transform 0.2s; }
+    .startupPanel.open .startupChevron { transform: rotate(180deg); }
+    .startupHeaderRight { display: flex; align-items: center; gap: 8px; }
+    .startupRefreshBtn {
+      font-size: 11px;
+      background: rgba(59,130,246,0.15);
+      border: 1px solid rgba(59,130,246,0.35);
+      color: #93c5fd;
+      border-radius: 6px;
+      padding: 3px 9px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .startupRefreshBtn:hover { background: rgba(59,130,246,0.28); }
+    .startupBody { display: none; padding: 8px 0; }
+    .startupPanel.open .startupBody { display: block; }
+    .startupList { max-height: 260px; overflow-y: auto; }
+    .startupEmpty {
+      text-align: center;
+      color: #475569;
+      font-size: 13px;
+      padding: 20px 0;
+    }
+    .startupRow {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 14px;
+      border-bottom: 1px solid rgba(30,41,59,0.6);
+      transition: background 0.12s;
+    }
+    .startupRow:last-child { border-bottom: none; }
+    .startupRow:hover { background: rgba(255,255,255,0.025); }
+    .startupToggle {
+      position: relative;
+      width: 34px;
+      height: 18px;
+      flex-shrink: 0;
+    }
+    .startupToggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .startupSlider {
+      position: absolute;
+      inset: 0;
+      background: #334155;
+      border-radius: 18px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .startupSlider::before {
+      content: "";
+      position: absolute;
+      left: 2px; top: 2px;
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: #94a3b8;
+      transition: transform 0.2s, background 0.2s;
+    }
+    .startupToggle input:checked + .startupSlider { background: rgba(34,197,94,0.25); }
+    .startupToggle input:checked + .startupSlider::before {
+      transform: translateX(16px);
+      background: #22c55e;
+    }
+    .startupToggle input:disabled + .startupSlider { opacity: 0.4; cursor: not-allowed; }
+    .startupInfo { flex: 1; min-width: 0; }
+    .startupName {
+      font-size: 13px;
+      color: #e2e8f0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .startupCmd {
+      font-size: 10px;
+      color: #475569;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-top: 1px;
+    }
+    .startupHive {
+      font-size: 10px;
+      color: #38bdf8;
+      flex-shrink: 0;
+      background: rgba(56,189,248,0.1);
+      border: 1px solid rgba(56,189,248,0.25);
+      border-radius: 4px;
+      padding: 1px 5px;
+    }
+    .startupStatus {
+      font-size: 11px;
+      padding: 0 6px 6px 14px;
+      color: #64748b;
+      min-height: 16px;
+    }
   </style>
 </head>
 
@@ -493,6 +612,25 @@
         <button id="toggleFilesBtn" class="ghostBtn">Show Less</button>
       </div>
     </section> -->
+
+    <!-- Startup Programs Panel -->
+    <section class="startupPanel" id="startupPanel">
+      <div class="startupHeader" id="startupToggleHeader">
+        <div class="startupHeaderLeft">
+          <span>⚡ Startup Programs</span>
+          <span class="startupChevron" id="startupChevron">▼</span>
+        </div>
+        <div class="startupHeaderRight">
+          <button class="startupRefreshBtn" id="startupRefreshBtn">↻ Refresh</button>
+        </div>
+      </div>
+      <div class="startupBody" id="startupBody">
+        <div class="startupList" id="startupList">
+          <div class="startupEmpty" id="startupEmpty">Click ↻ Refresh to load startup programs</div>
+        </div>
+        <div class="startupStatus" id="startupStatusEl"></div>
+      </div>
+    </section>
 
     <footer class="footer">
       <!-- 👇 Clean spacing + name -->

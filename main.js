@@ -1,6 +1,7 @@
 "use strict";
 const { app, BrowserWindow, ipcMain, dialog, Tray, Menu, nativeImage } = require("electron");
 const fs = require("fs");
+const { execFile, exec } = require("child_process");
 const path = require("path");
 const { scanDefaultTargets } = require("./scanner");
 const { cleanFiles } = require("./cleaner");
@@ -185,6 +186,172 @@ async function recalculate(files, directories) {
   return { files: remainingFiles, directories: remainingDirectories, totalBytes: remainingBytes };
 }
 
+// ── Startup program helpers (Windows registry) ───────────────────────────────
+
+// All registry Run hives — queried with /reg:64 to force 64-bit view regardless of process arch
+const STARTUP_REG_SOURCES = [
+  { label: "HKCU Run",      hive: "HKCU", approvedHive: "HKCU",   regFlag: "/reg:64",
+    key: "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run",
+    approvedKey: "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\StartupApproved\\Run" },
+  { label: "HKCU RunOnce", hive: "HKCU", approvedHive: "HKCU",   regFlag: "/reg:64",
+    key: "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnce",
+    approvedKey: null },
+  { label: "HKLM Run",      hive: "HKLM", approvedHive: "HKLM",   regFlag: "/reg:64",
+    key: "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run",
+    approvedKey: "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\StartupApproved\\Run" },
+  { label: "HKLM RunOnce", hive: "HKLM", approvedHive: "HKLM",   regFlag: "/reg:64",
+    key: "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnce",
+    approvedKey: null },
+  { label: "HKLM32 Run",   hive: "HKLM32", approvedHive: "HKLM32", regFlag: "/reg:32",
+    key: "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run",
+    approvedKey: "HKLM\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Explorer\\StartupApproved\\Run32" },
+  { label: "HKCU Policies",hive: "HKCU", approvedHive: null, regFlag: "/reg:64",
+    key: "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run",
+    approvedKey: null },
+  { label: "HKLM Policies",hive: "HKLM", approvedHive: null, regFlag: "/reg:64",
+    key: "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run",
+    approvedKey: null },
+];
+
+// Parse reg query output — reg.exe uses TAB separators between name/type/data
+function parseRegOutput(stdout) {
+  const entries = [];
+  for (const line of stdout.split(/\r?\n/)) {
+    const trimmed = line.trimStart();
+    if (!trimmed || trimmed.startsWith("HKEY_") || trimmed.startsWith("!")) continue;
+    // Matches:  <whitespace>Name<TAB>Type<TAB>Data
+    // Also handles when multiple spaces are used instead of a tab
+    const m = trimmed.match(/^(.+?)\s{2,}(REG_SZ|REG_EXPAND_SZ)\s{2,}(.+)$/);
+    if (m) {
+      entries.push({ name: m[1].trim(), value: m[3].trim() });
+      continue;
+    }
+    // Fallback: tab-separated
+    const parts = trimmed.split(/\t/);
+    if (parts.length >= 3 && (parts[1].trim() === "REG_SZ" || parts[1].trim() === "REG_EXPAND_SZ")) {
+      entries.push({ name: parts[0].trim(), value: parts.slice(2).join("\t").trim() });
+    }
+  }
+  return entries;
+}
+
+function parseRegBinaryDisabled(stdout) {
+  const map = {};
+  for (const line of stdout.split(/\r?\n/)) {
+    const trimmed = line.trimStart();
+    if (!trimmed || trimmed.startsWith("HKEY_")) continue;
+    const m = trimmed.match(/^(.+?)\s{2,}REG_BINARY\s{2,}([0-9A-Fa-f]+)/);
+    if (m) {
+      const firstByte = parseInt(m[2].slice(0, 2), 16);
+      map[m[1].trim()] = firstByte === 3; // 03 = disabled
+      continue;
+    }
+    const parts = trimmed.split(/\t/);
+    if (parts.length >= 3 && parts[1].trim() === "REG_BINARY") {
+      const firstByte = parseInt((parts[2] || "").slice(0, 2), 16);
+      map[parts[0].trim()] = firstByte === 3;
+    }
+  }
+  return map;
+}
+
+function regQuery(key, regFlag) {
+  return new Promise((resolve) => {
+    const flagArg = regFlag || "";
+    exec(`reg query "${key}" ${flagArg}`, { windowsHide: true }, (err, stdout) => {
+      resolve(err ? [] : parseRegOutput(stdout || ""));
+    });
+  });
+}
+
+function regQueryDisabled(key, regFlag) {
+  return new Promise((resolve) => {
+    const flagArg = regFlag || "";
+    exec(`reg query "${key}" ${flagArg}`, { windowsHide: true }, (err, stdout) => {
+      resolve(err ? {} : parseRegBinaryDisabled(stdout || ""));
+    });
+  });
+}
+
+// Scan shell startup folders
+function scanStartupFolder(folderPath, hiveLabel) {
+  try {
+    if (!fs.existsSync(folderPath)) return [];
+    return fs.readdirSync(folderPath)
+      .filter(f => !f.startsWith("."))
+      .map(f => ({
+        id: `${hiveLabel}|folder|${f}`,
+        name: f.replace(/\.[^.]+$/, ""),
+        command: path.join(folderPath, f),
+        hive: hiveLabel,
+        registryKey: null,
+        approvedKey: null,
+        source: "Startup Folder",
+        enabled: true,  // folder items are always considered enabled
+        canToggle: false,
+      }));
+  } catch (_) { return []; }
+}
+
+async function listStartupPrograms() {
+  const seen = new Set();
+  const results = [];
+
+  // Registry sources
+  for (const src of STARTUP_REG_SOURCES) {
+    const [entries, disabledMap] = await Promise.all([
+      regQuery(src.key, src.regFlag),
+      src.approvedKey ? regQueryDisabled(src.approvedKey, src.regFlag).catch(() => ({})) : Promise.resolve({}),
+    ]);
+    for (const e of entries) {
+      const uid = `${src.label}|${e.name.toLowerCase()}`;
+      if (seen.has(uid)) continue;
+      seen.add(uid);
+      results.push({
+        id: uid,
+        name: e.name,
+        command: e.value,
+        hive: src.hive,
+        approvedKey: src.approvedKey,
+        registryKey: src.key,
+        regFlag: src.regFlag,
+        source: src.label,
+        enabled: !(disabledMap[e.name] === true),
+        canToggle: !!src.approvedKey,
+      });
+    }
+  }
+
+  // Shell startup folders
+  try {
+    const userStartup   = path.join(app.getPath("appData"), "Microsoft\\Windows\\Start Menu\\Programs\\Startup");
+    const commonStartup = "C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Startup";
+    for (const item of scanStartupFolder(userStartup, "Startup Folder")) {
+      if (!seen.has(item.id)) { seen.add(item.id); results.push(item); }
+    }
+    for (const item of scanStartupFolder(commonStartup, "Common Startup")) {
+      if (!seen.has(item.id)) { seen.add(item.id); results.push(item); }
+    }
+  } catch (_) {}
+
+  return results;
+}
+
+function setStartupItemEnabled(hiveLabel, name, approvedKey, regFlag, enable) {
+  return new Promise((resolve) => {
+    if (!approvedKey) return resolve({ ok: false, error: "This entry cannot be toggled (no approved key)." });
+    // 02 00 00 00 00 00 00 00 00 00 00 00 = enabled
+    // 03 00 00 00 00 00 00 00 00 00 00 00 = disabled
+    const hexVal = enable ? "0200000000000000000000" : "0300000000000000000000";
+    const flag = regFlag || "";
+    const cmd = `reg add "${approvedKey}" /v "${name}" /t REG_BINARY /d ${hexVal} /f ${flag}`;
+    exec(cmd, { windowsHide: true }, (err) => {
+      if (err) return resolve({ ok: false, error: err.message });
+      resolve({ ok: true });
+    });
+  });
+}
+
 // ── IPC setup ─────────────────────────────────────────────────────────────────
 function setupIpc() {
   ipcMain.handle("autostart:get", async () => {
@@ -195,6 +362,23 @@ function setupIpc() {
   ipcMain.handle("autostart:set", async (_e, enabled) => {
     try { return { ok: await setAutoStartEnabled(app.getName(), !!enabled) }; }
     catch (e) { return { ok: false, error: String(e && e.message ? e.message : e) }; }
+  });
+
+  ipcMain.handle("startup:list", async () => {
+    try {
+      const items = await listStartupPrograms();
+      return { ok: true, items };
+    } catch (e) {
+      return { ok: false, error: String(e && e.message ? e.message : e), items: [] };
+    }
+  });
+
+  ipcMain.handle("startup:setEnabled", async (_e, { hive, name, approvedKey, regFlag, enable }) => {
+    try {
+      return await setStartupItemEnabled(hive, name, approvedKey, regFlag, !!enable);
+    } catch (e) {
+      return { ok: false, error: String(e && e.message ? e.message : e) };
+    }
   });
 
   ipcMain.handle("stats:get", async () => ({ ok: true, stats: getStatsSnapshot() }));

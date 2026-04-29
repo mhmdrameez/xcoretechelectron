@@ -376,6 +376,152 @@
     });
   }
 
+  // ── Startup Programs Panel ──────────────────────────────────────────────────
+  const startupPanelEl       = el("startupPanel");
+  const startupToggleHeader  = el("startupToggleHeader");
+  const startupListEl        = el("startupList");
+  const startupEmptyEl       = el("startupEmpty");
+  const startupRefreshBtnEl  = el("startupRefreshBtn");
+  const startupStatusEl2     = el("startupStatusEl");
+
+  let startupItems = [];
+  let startupLoading = false;
+
+  function setStartupStatus(msg) {
+    if (startupStatusEl2) startupStatusEl2.textContent = msg || "";
+  }
+
+  function renderStartupList() {
+    if (!startupListEl) return;
+    if (!startupItems.length) {
+      startupListEl.innerHTML = "<div class=\"startupEmpty\">No startup programs found.</div>";
+      return;
+    }
+    const frag = document.createDocumentFragment();
+    for (const item of startupItems) {
+      const row = document.createElement("div");
+      row.className = "startupRow";
+      row.dataset.id = item.id;
+
+      const toggleLabel = document.createElement("label");
+      toggleLabel.className = "startupToggle";
+
+      const chk = document.createElement("input");
+      chk.type = "checkbox";
+      chk.checked = item.enabled;
+      chk.disabled = !item.canToggle;
+      chk.title = item.canToggle
+        ? (item.enabled ? "Click to disable" : "Click to enable")
+        : "Cannot toggle this entry";
+
+      const slider = document.createElement("span");
+      slider.className = "startupSlider";
+
+      toggleLabel.appendChild(chk);
+      toggleLabel.appendChild(slider);
+
+      const info = document.createElement("div");
+      info.className = "startupInfo";
+
+      const nameEl = document.createElement("div");
+      nameEl.className = "startupName";
+      nameEl.textContent = item.name;
+      nameEl.title = item.name;
+
+      const cmdEl = document.createElement("div");
+      cmdEl.className = "startupCmd";
+      cmdEl.textContent = item.command;
+      cmdEl.title = item.command;
+
+      info.appendChild(nameEl);
+      info.appendChild(cmdEl);
+
+      const hiveEl = document.createElement("span");
+      hiveEl.className = "startupHive";
+      hiveEl.textContent = item.source || item.hive;
+
+      row.appendChild(toggleLabel);
+      row.appendChild(info);
+      row.appendChild(hiveEl);
+
+      // Toggle event
+      if (item.canToggle) chk.addEventListener("change", async () => {
+        const wantEnable = chk.checked;
+        chk.disabled = true;
+        setStartupStatus(wantEnable ? `Enabling "${item.name}"…` : `Disabling "${item.name}"…`);
+        try {
+          const r = await window.api.setStartupEnabled(item.hive, item.name, item.approvedKey, item.regFlag, wantEnable);
+          if (r && r.ok) {
+            item.enabled = wantEnable;
+            chk.title = wantEnable ? "Click to disable" : "Click to enable";
+            setStartupStatus(wantEnable ? `✔ "${item.name}" enabled.` : `✔ "${item.name}" disabled.`);
+          } else {
+            chk.checked = !wantEnable; // rollback
+            setStartupStatus(`⚠ Failed: ${r && r.error ? r.error : "Unknown error"}`);
+          }
+        } catch (err) {
+          chk.checked = !wantEnable;
+          setStartupStatus(`⚠ Error: ${err && err.message ? err.message : String(err)}`);
+        } finally {
+          chk.disabled = !item.canToggle;
+        }
+      });
+
+      frag.appendChild(row);
+    }
+    startupListEl.textContent = "";
+    startupListEl.appendChild(frag);
+  }
+
+  async function loadStartupPrograms() {
+    if (startupLoading) return;
+    startupLoading = true;
+    setStartupStatus("Loading startup programs…");
+    if (startupListEl) startupListEl.innerHTML = "<div class=\"startupEmpty\">Loading…</div>";
+    try {
+      const r = await window.api.getStartupList();
+      if (r && r.ok) {
+        startupItems = Array.isArray(r.items) ? r.items : [];
+        renderStartupList();
+        setStartupStatus(`${startupItems.length} startup program(s) found.`);
+      } else {
+        startupItems = [];
+        if (startupListEl) startupListEl.innerHTML = "<div class=\"startupEmpty\">Failed to load startup programs.</div>";
+        setStartupStatus(r && r.error ? `Error: ${r.error}` : "Failed to load.");
+      }
+    } catch (err) {
+      if (startupListEl) startupListEl.innerHTML = "<div class=\"startupEmpty\">Error loading startup programs.</div>";
+      setStartupStatus(`Error: ${err && err.message ? err.message : String(err)}`);
+    } finally {
+      startupLoading = false;
+    }
+  }
+
+  // Collapsible toggle
+  if (startupToggleHeader) {
+    startupToggleHeader.addEventListener("click", (e) => {
+      // Don't toggle when clicking refresh button
+      if (e.target.closest("#startupRefreshBtn")) return;
+      if (!startupPanelEl) return;
+      const isOpen = startupPanelEl.classList.toggle("open");
+      // Auto-load on first open
+      if (isOpen && !startupItems.length && !startupLoading) {
+        loadStartupPrograms();
+      }
+    });
+  }
+
+  if (startupRefreshBtnEl) {
+    startupRefreshBtnEl.addEventListener("click", (e) => {
+      e.stopPropagation();
+      // Auto-open panel
+      if (startupPanelEl && !startupPanelEl.classList.contains("open")) {
+        startupPanelEl.classList.add("open");
+      }
+      loadStartupPrograms();
+    });
+  }
+
   // ── init ───────────────────────────────────────────────────────────────────
   function init() {
     setButtons();
@@ -405,3 +551,4 @@
   }
 
 })();
+
