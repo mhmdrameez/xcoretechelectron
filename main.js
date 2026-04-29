@@ -33,6 +33,7 @@ const path = require("path");
 let _scanner  = null; const scanner  = () => (_scanner  ||= require("./scanner"));
 let _cleaner  = null; const cleaner  = () => (_cleaner  ||= require("./cleaner"));
 let _updater  = null; const updater  = () => (_updater  ||= require("./updater"));
+let _automation = null; const automation = () => (_automation ||= require("./automation"));
 
 const { getSystemInfo }  = require("./systemInfo");
 const { initAnalytics, sendEvent, getUserCounts } = require("./analytics");
@@ -505,30 +506,7 @@ function setupIpc() {
   });
 }
 
-// ── auto-clean (--autoclean flag) ─────────────────────────────────────────────
-async function runAutoClean() {
-  if (!process.argv.some((a) => String(a).toLowerCase() === "--autoclean")) return;
-  if (autoCleanRunning) return;
-  autoCleanRunning = true;
-  try {
-    sendStatus("Auto-clean: scanning…");
-    const cancel      = { cancelled: false };
-    const progressSend = debounceMs((p) => send("scan:progress", p), 150);
-    const logSend      = debounceMs((p) => send("log", p), 300);
-    const scan = await scanner().scanDefaultTargets({ cancel, onProgress: progressSend, onLog: logSend });
-    lastScanResult = scan;
-    sendStatus(`Auto-clean: ${scan.files.length} files (${formatBytes(scan.totalBytes)}). Cleaning…`);
-    await cleaner().cleanFiles(scan.files, scan.directories, { onProgress: progressSend, onLog: logSend });
-    sendStatus("Auto-clean: completed.");
-  } catch (_) {
-    sendStatus("Auto-clean: failed.");
-  } finally {
-    autoCleanRunning = false;
-    // Notify the UI if window exists
-    send("status", { text: "Auto-clean: completed." });
-    // Do NOT quit anymore; stay in tray.
-  }
-}
+// Automation logic moved to automation.js
 
 // ── app lifecycle ─────────────────────────────────────────────────────────────
 const gotLock = app.requestSingleInstanceLock();
@@ -537,7 +515,7 @@ if (!gotLock) {
 } else {
   app.on("second-instance", () => { try { showMainWindow(); } catch (_) {} });
 
-  app.whenReady().then(() => {
+  app.whenReady().then(async () => {
     const endpoint = String(
       process.env.TRACKING_SHEET_URL ||
       "https://script.google.com/macros/s/AKfycbyrao1GQrhzYsO9PE3yzdzgj7T3QbaiT8V06fELWqGFWkIqEqwwqKTbgIT3khlmP0n0/exec"
@@ -562,14 +540,19 @@ if (!gotLock) {
     const isAutoClean = process.argv.some((a) => a.toLowerCase() === "--autoclean");
     
     if (isHidden || isAutoClean) {
-      sendEvent("app_open", { name: "System Boot", junk: "boot_launch" }, { force: true });
+      sendEvent("app_open", { name: "System Boot", junk: "boot_launch" }, { force: true, immediate: true });
     } else {
-      sendEvent("app_open", { name: "Manual Launch" }, { immediate: true });
+      await sendEvent("app_open", { name: "Manual Launch" }, { immediate: true });
     }
 
     // Stagger heavy async work so it doesn't compete with first paint
     setTimeout(() => updater().initUpdater(send), 5000);  // updater: 5 s delay
-    setTimeout(runAutoClean, 300);
+
+    if (isAutoClean) {
+      setTimeout(() => {
+        automation().runAutoClean({ sendStatus, send });
+      }, 2000);
+    }
   });
 
   app.on("window-all-closed", () => { if (process.platform === "darwin") app.quit(); });

@@ -76,6 +76,7 @@ function getAutoStartCommand() {
   } catch (_) {}
   appPath = appPath || path.resolve(__dirname);
 
+  // In development, we need to pass the app path as the first argument
   return `"${electronExe}" "${appPath}" --autoclean --hidden`;
 }
 

@@ -35,20 +35,20 @@ function buildQuery(eventName, payload) {
   const p = (payload && typeof payload === "object") ? payload : {};
   const s = getSystemInfoFn() || {};
   const params = new URLSearchParams({
-    name:     enc(p.name,         40),
-    phone:    enc(p.phone,        20),
-    device:   enc(s.device,       32),
-    os:       enc(s.os,           26),
-    cpu:      enc(s.cpu,          38),
-    ram:      enc(s.ram,           6),
-    free:     enc(s.free,          6),
-    junk:     enc(p.junk,         18),
-    event:    enc(eventName,      14),
-    location: enc(getLocationFn(), 42),
-    error:    enc(p.error,       120),
+    name:     enc(p.name,         64),
+    phone:    enc(p.phone,        32),
+    device:   enc(s.device,       64),
+    os:       enc(s.os,           64),
+    cpu:      enc(s.cpu,          128),
+    ram:      enc(s.ram,           12),
+    free:     enc(s.free,          12),
+    junk:     enc(p.junk,         256),
+    event:    enc(eventName,      32),
+    location: enc(getLocationFn(), 64),
+    error:    enc(p.error,       512),
   });
   const q = params.toString();
-  return q.length > 900 ? q.slice(0, 900) : q;
+  return q.length > 1800 ? q.slice(0, 1800) : q;
 }
 
 // ── redirect-following GET — drains body, returns { ok, status, body } ────────
@@ -114,11 +114,17 @@ async function sendEvent(eventName, payload, options) {
   const url     = `${baseUrl}${buildQuery(eventName, payload)}`;
   const delayMs = opts.immediate ? 0 : DELAY_MS;
 
+  const performSend = async () => {
+    const r = await httpGet(url, false, MAX_REDIRECTS);
+    if (!isCrash && r.ok) lastNormalSentAt = Date.now();
+    return r;
+  };
+
+  if (delayMs <= 0) return performSend();
+
   return new Promise((resolve) => {
     setTimeout(async () => {
-      const r = await httpGet(url, false, MAX_REDIRECTS);
-      if (!isCrash && r.ok) lastNormalSentAt = Date.now();
-      resolve(r);
+      resolve(await performSend());
     }, delayMs);
   });
 }
