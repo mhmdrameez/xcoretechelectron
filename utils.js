@@ -65,7 +65,7 @@ function getAutoStartCommand() {
   // Dev: use electron binary + app path.
   try {
     if (app && app.isPackaged) {
-      return `"${process.execPath}" --autoclean`;
+      return `"${process.execPath}" --autoclean --hidden`;
     }
   } catch (_) {}
 
@@ -76,7 +76,7 @@ function getAutoStartCommand() {
   } catch (_) {}
   appPath = appPath || path.resolve(__dirname);
 
-  return `"${electronExe}" "${appPath}" --autoclean`;
+  return `"${electronExe}" "${appPath}" --autoclean --hidden`;
 }
 
 async function getAutoStartEnabled(entryName) {

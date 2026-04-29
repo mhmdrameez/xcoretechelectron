@@ -450,7 +450,7 @@
         chk.disabled = true;
         setStartupStatus(wantEnable ? `Enabling "${item.name}"…` : `Disabling "${item.name}"…`);
         try {
-          const r = await window.api.setStartupEnabled(item.hive, item.name, item.approvedKey, item.regFlag, wantEnable);
+          const r = await window.api.setStartupEnabled(item.name, item.approvedKey, item.regFlag, wantEnable);
           if (r && r.ok) {
             item.enabled = wantEnable;
             chk.title = wantEnable ? "Click to disable" : "Click to enable";
