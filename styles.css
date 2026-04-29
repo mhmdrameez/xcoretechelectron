@@ -1,0 +1,203 @@
+:root {
+  --bg: #0b0f14;
+  --panel: #101722;
+  --panel2: #0f1520;
+  --text: #e8eef7;
+  --muted: #98a6b9;
+  --border: #223047;
+  --primary: #3a86ff;
+  --danger: #ff4d6d;
+  --btn: #172235;
+  --btnHover: #1b2b45;
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+  --sans: "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+}
+
+#app {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px;
+  background: linear-gradient(180deg, var(--panel), var(--panel2));
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+
+.appname {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+.subtitle {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+}
+
+.btn {
+  border: 1px solid var(--border);
+  background: var(--btn);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-weight: 600;
+  cursor: pointer;
+  min-width: 96px;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--btnHover);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.primary {
+  border-color: rgba(58, 134, 255, 0.45);
+}
+
+.danger {
+  border-color: rgba(255, 77, 109, 0.45);
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  user-select: none;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.checkbox input {
+  width: 16px;
+  height: 16px;
+}
+
+.progress {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(90px, 130px));
+  gap: 12px;
+}
+
+.metric {
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #0c121b;
+}
+
+.metric .label {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.metric .value {
+  font-size: 14px;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.listWrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: #0c121b;
+}
+
+.listHeader {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.fileList {
+  overflow: auto;
+  padding: 6px 0;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.fileRow {
+  padding: 6px 12px;
+  border-bottom: 1px solid rgba(34, 48, 71, 0.35);
+  color: rgba(232, 238, 247, 0.9);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fileRow:nth-child(2n) {
+  background: rgba(16, 23, 34, 0.35);
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.footer {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--panel2);
+}
+
+.status {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+

@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Disk Cleaner</title>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #020617;
+      color: #e2e8f0;
+    }
+
+    #app {
+      max-width: 900px;
+      margin: auto;
+      padding: 10px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      border-bottom: 1px solid #1e293b;
+    }
+
+    .appname {
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    .subtitle {
+      font-size: 12px;
+      color: #94a3b8;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .card {
+      margin-top: 10px;
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: 10px;
+      padding: 12px;
+    }
+
+    .cardTitle {
+      font-size: 14px;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+
+    .fieldRow {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .fieldRow input {
+      flex: 1;
+      background: #020617;
+      color: #e2e8f0;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 9px 10px;
+      outline: none;
+    }
+
+    .saveBtn {
+      background: #16a34a;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 9px 14px;
+      cursor: pointer;
+    }
+
+    .sysGrid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .serviceTag {
+      font-size: 12px;
+      margin-top: 5px;
+      color: #38bdf8;
+    }
+
+    .actions button {
+      padding: 8px 14px;
+      border: none;
+      border-radius: 6px;
+      margin-left: 8px;
+      cursor: pointer;
+    }
+
+    .primary {
+      background: #3b82f6;
+      color: white;
+    }
+
+    .danger {
+      background: #ef4444;
+      color: white;
+    }
+
+    .controls {
+      padding: 10px;
+    }
+
+    .checkbox {
+      font-size: 14px;
+    }
+
+    .progress {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px;
+      gap: 10px;
+    }
+
+    .metric {
+      text-align: center;
+    }
+
+    .label {
+      font-size: 12px;
+      color: #94a3b8;
+    }
+
+    .value {
+      font-size: 16px;
+      font-weight: bold;
+    }
+
+    .impactGrid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .impactCard {
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      padding: 10px;
+    }
+
+    .impactLabel {
+      font-size: 12px;
+      color: #94a3b8;
+    }
+
+    .impactValue {
+      margin-top: 4px;
+      font-size: 15px;
+      font-weight: bold;
+      color: #22c55e;
+    }
+
+    .listWrap {
+      margin-top: 10px;
+    }
+
+    .listHeader {
+      display: flex;
+      justify-content: space-between;
+      padding: 5px;
+      font-size: 14px;
+    }
+
+    .fileList {
+      background: #020617;
+      border: 1px solid #1e293b;
+      border-radius: 6px;
+      min-height: 100px;
+      max-height: 220px;
+      overflow: auto;
+      padding: 4px 0;
+    }
+
+    .fileRow {
+      font-size: 12px;
+      color: #cbd5e1;
+      padding: 4px 8px;
+      border-bottom: 1px dashed rgba(51, 65, 85, 0.35);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .fileRow:last-child {
+      border-bottom: none;
+    }
+
+    .listControls {
+      margin-top: 6px;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .ghostBtn {
+      background: transparent;
+      border: 1px solid #334155;
+      color: #93c5fd;
+      padding: 4px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .busyOverlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(2, 6, 23, 0.75);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+
+    body.busy .busyOverlay {
+      display: flex;
+    }
+
+    .busyCard {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 18px 20px;
+      text-align: center;
+      min-width: 260px;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
+    }
+
+    .spinner {
+      width: 36px;
+      height: 36px;
+      border: 4px solid rgba(148, 163, 184, 0.3);
+      border-top-color: #22c55e;
+      border-radius: 50%;
+      margin: 0 auto 10px;
+      animation: spin 0.9s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* 🔥 FOOTER DESIGN */
+    .footer {
+      margin-top: 15px;
+      padding: 12px;
+      border-top: 1px solid #1e293b;
+    }
+
+    .status {
+      font-size: 13px;
+      margin-bottom: 10px;
+      color: #94a3b8;
+    }
+
+    .contactBox {
+      background: linear-gradient(135deg, #1e293b, #020617);
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid #334155;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    }
+
+    .owner {
+      font-size: 14px;
+      margin-bottom: 5px;
+      color: #38bdf8;
+    }
+
+    .phone {
+      font-size: 16px;
+      font-weight: bold;
+      color: #22c55e;
+      margin-bottom: 8px;
+    }
+
+    .services {
+      font-size: 12px;
+      line-height: 1.6;
+      color: #cbd5f5;
+      margin-bottom: 8px;
+    }
+
+    .offer {
+      font-size: 12px;
+      color: #facc15;
+      font-weight: bold;
+    }
+    /* ── Auto-Update Banner ── */
+    @keyframes slideDown {
+      from { transform: translateY(-100%); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
+    #updateBanner {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      background: linear-gradient(90deg, rgba(234,179,8,0.18) 0%, rgba(251,146,60,0.12) 100%);
+      border-bottom: 1px solid rgba(234,179,8,0.4);
+      padding: 7px 16px;
+      font-size: 12px;
+      color: #fbbf24;
+      animation: slideDown 0.3s ease-out;
+    }
+    #updateBanner.visible { display: flex; }
+    #updateBanner .uMsg  { flex: 1; }
+    #updateBanner .uPct  { font-weight: bold; min-width: 36px; text-align: right; }
+    #updateBanner .uBtn  {
+      background: rgba(234,179,8,0.25);
+      border: 1px solid rgba(234,179,8,0.55);
+      border-radius: 12px;
+      color: #fbbf24;
+      font-size: 11px;
+      padding: 3px 10px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s;
+    }
+    #updateBanner .uBtn:hover { background: rgba(234,179,8,0.4); }
+
+
+    @keyframes trustPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.25); }
+      50%       { box-shadow: 0 0 0 5px rgba(234, 179, 8, 0); }
+    }
+    .trustedBadge {
+      display: none;
+      align-items: center;
+      gap: 7px;
+      background: linear-gradient(135deg, rgba(234,179,8,0.13) 0%, rgba(251,146,60,0.08) 100%);
+      border: 1px solid rgba(234, 179, 8, 0.45);
+      border-radius: 24px;
+      padding: 5px 13px 5px 10px;
+      margin-right: 14px;
+      margin-left: auto;
+      white-space: nowrap;
+      cursor: default;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .trustedBadge.visible {
+      display: flex;
+      animation: trustPulse 3s ease-in-out infinite;
+    }
+    .trustedBadge:hover {
+      background: linear-gradient(135deg, rgba(234,179,8,0.20) 0%, rgba(251,146,60,0.13) 100%);
+      border-color: rgba(234, 179, 8, 0.7);
+    }
+    .trustedBadge .tIcon {
+      font-size: 14px;
+      line-height: 1;
+      filter: drop-shadow(0 0 3px rgba(234,179,8,0.5));
+    }
+    .trustedBadge .tBy {
+      font-size: 10px;
+      color: #94a3b8;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      line-height: 1;
+    }
+    .trustedBadge .tCount {
+      font-size: 15px;
+      font-weight: 800;
+      color: #fbbf24;
+      letter-spacing: -0.02em;
+      line-height: 1;
+    }
+    .trustedBadge .tLabel {
+      font-size: 10px;
+      color: #d4a017;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      font-weight: 600;
+      line-height: 1;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app">
+    <!-- Auto-update notification strip -->
+    <div id="updateBanner">
+      <span class="uMsg" id="updateMsg">🔄 Checking for updates…</span>
+      <span class="uPct" id="updatePct"></span>
+      <button class="uBtn" id="updateBtn" style="display:none">Restart &amp; Update</button>
+    </div>
+    <header class="header">
+      <div class="title">
+        <div class="appname">XCoreTech Disk Cleaner</div>
+        <div class="subtitle">
+          Minimal, safe cleanup for temp, cache, and prefetch
+        </div>
+      </div>
+      <div id="trustedBadge" class="trustedBadge" title="Verified users who trust XCoreTech Disk Cleaner">
+        <span class="tIcon">🛡️</span>
+        <div style="display:flex;flex-direction:column;gap:1px;">
+          <span class="tBy">Trusted by</span>
+          <div style="display:flex;align-items:baseline;gap:4px;">
+            <span id="trustedCount" class="tCount">0</span>
+            <span class="tLabel">Users</span>
+          </div>
+        </div>
+      </div>
+      <div class="actions">
+        <button id="scanBtn" class="btn primary">Scan</button>
+        <button id="cleanBtn" class="btn danger" disabled>Clean</button>
+      </div>
+    </header>
+
+    <section class="controls">
+      <label class="checkbox">
+        <input id="autoStartChk" type="checkbox" />
+        <span>Auto Clean on Startup</span>
+      </label>
+
+      <div class="progress">
+        <div class="metric">
+          <div class="label">Files</div>
+          <div id="totalFiles" class="value">0</div>
+        </div>
+        <div class="metric">
+          <div class="label">Size</div>
+          <div id="totalSize" class="value">0 B</div>
+        </div>
+        <div class="metric">
+          <div class="label">Progress</div>
+          <div id="progressPct" class="value">0%</div>
+        </div>
+      </div>
+      <div class="impactGrid">
+        <div class="impactCard">
+          <div class="impactLabel">Total cleaned</div>
+          <div id="impactTotalCleaned" class="impactValue">0 B</div>
+        </div>
+        <div class="impactCard">
+          <div class="impactLabel">Cleanup runs</div>
+          <div id="impactRuns" class="impactValue">0</div>
+        </div>
+        <div class="impactCard">
+          <div class="impactLabel">Avg clean time</div>
+          <div id="impactAvgTime" class="impactValue">0s</div>
+        </div>
+        <div class="impactCard">
+          <div class="impactLabel">Estimated speed gain</div>
+          <div id="impactSpeedGain" class="impactValue">0%</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="firstRunCard" class="card hidden">
+      <div class="cardTitle">First-Time Setup</div>
+      <div class="fieldRow">
+        <input id="customerNameInput" type="text" placeholder="Customer Name" maxlength="40" />
+        <input id="customerPhoneInput" type="text" placeholder="Phone Number" maxlength="20" />
+        <button id="saveCustomerBtn" class="saveBtn">Save</button>
+      </div>
+      <div id="profileStatus" class="status"></div>
+    </section>
+
+    <section id="dashboardCard" class="card hidden">
+      <div class="cardTitle" style="margin-top:10px;">Optimization Result</div>
+      <div class="sysGrid" style="grid-template-columns: repeat(2, minmax(0, 1fr));">
+        <div class="impactCard"><div class="impactLabel">Junk Removed</div><div id="optJunkRemoved" class="impactValue">0 B</div></div>
+        <div class="impactCard"><div class="impactLabel">Status</div><div id="optStatus" class="impactValue">Idle</div></div>
+      </div>
+    </section>
+
+    <!-- <section class="listWrap">
+      <div class="listHeader">
+        <div>Files found</div>
+        <div id="listNote" class="muted"></div>
+      </div>
+      <div id="fileList" class="fileList"></div>
+      <div class="listControls">
+        <button id="toggleFilesBtn" class="ghostBtn">Show Less</button>
+      </div>
+    </section> -->
+
+    <footer class="footer">
+      <!-- 👇 Clean spacing + name -->
+      <!-- <div id="statusText" class="status">
+        Idle... &nbsp;&nbsp;|&nbsp;&nbsp; 💻 Need expert PC help? Contact <strong>Ramee Z</strong> – +91 7907858474
+      </div> -->
+
+      <div class="contactBox">
+        <div class="owner">👨‍💻 Service by Ramee Z</div>
+
+        <div class="phone">📞 +91 7907858474</div>
+
+        <div class="services">
+          ✔ Windows Installation & Formatting <br/>
+          ✔ PC Speed Optimization <br/>
+          ✔ Virus Removal <br/>
+          ✔ Network & WiFi Setup <br/>
+          ✔ Full System Service
+        </div>
+
+        <div class="offer">
+          🎁 Free Basic Cleanup – Upgrade for Full Service
+        </div>
+      </div>
+    </footer>
+  </div>
+  <div id="busyOverlay" class="busyOverlay" aria-live="polite" aria-busy="true">
+    <div class="busyCard">
+      <div class="spinner"></div>
+      <div id="busyMessage">Cleaning files... Please wait.</div>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

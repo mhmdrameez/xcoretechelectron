@@ -1,0 +1,76 @@
+{
+  "name": "xcoretech-disk-cleaner",
+  "version": "1.0.0",
+  "description": "Lightweight disk cleaner built with Electron",
+  "main": "index.js",
+  "author": "",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "electron . --js-flags=\"--max-old-space-size=128 --optimize-for-size\" --disable-gpu-sandbox",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "22.3.27",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.xcoretech.diskcleaner",
+    "productName": "XCoreTech Disk Cleaner",
+    "publish": {
+      "provider": "github",
+      "owner": "YOUR_GITHUB_USERNAME",
+      "repo": "YOUR_REPO_NAME",
+      "private": false
+    },
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "index.js",
+      "main.js",
+      "preload.js",
+      "renderer.js",
+      "scanner.js",
+      "cleaner.js",
+      "utils.js",
+      "systemInfo.js",
+      "analytics.js",
+      "crashHandler.js",
+      "location.js",
+      "updater.js",
+      "index.html",
+      "styles.css",
+      "assets/**/*"
+    ],
+    "asar": true,
+    "compression": "maximum",
+    "win": {
+      "icon": "assets/app-icon.ico",
+      "requestedExecutionLevel": "asInvoker",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "ia32",
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "XCoreTech Disk Cleaner",
+      "deleteAppDataOnUninstall": true
+    }
+  },
+  "dependencies": {
+    "axios": "^1.15.2",
+    "electron-updater": "^6.8.3"
+  }
+}
