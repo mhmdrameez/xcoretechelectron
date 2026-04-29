@@ -39,46 +39,63 @@ function writeCache(locationText) {
   } catch (_) {}
 }
 
-function fetchLocationOnce() {
-  if (fetchStarted) return;
-  fetchStarted = true;
+const ENDPOINTS = [
+  { url: "https://ipapi.co/json/", city: "city", country: "country_name" },
+  { url: "http://ip-api.com/json/", city: "city", country: "country" },
+  { url: "https://freeipapi.com/api/json", city: "cityName", country: "countryName" }
+];
 
-  const req = https.get("https://ipapi.co/json/", (res) => {
-    let body = "";
-    res.on("data", (chunk) => {
-      if (body.length < 600) body += String(chunk || "");
+function fetchWithRetry(index = 0) {
+  if (index >= ENDPOINTS.length) {
+    if (!memoryLocation || memoryLocation === "unknown") memoryLocation = "unknown";
+    return;
+  }
+
+  const service = ENDPOINTS[index];
+  const isHttps = service.url.startsWith("https");
+  const lib = isHttps ? require("https") : require("http");
+
+  try {
+    const req = lib.get(service.url, (res) => {
+      let body = "";
+      res.on("data", (chunk) => { if (body.length < 1024) body += chunk; });
+      res.on("end", () => {
+        try {
+          const parsed = JSON.parse(body || "{}");
+          const city = parsed[service.city] || "";
+          const country = parsed[service.country] || "";
+          if (city || country) {
+            memoryLocation = sanitizeLocation(city, country);
+            writeCache(memoryLocation);
+            return; // Success!
+          }
+        } catch (_) {}
+        fetchWithRetry(index + 1); // Try next
+      });
     });
-    res.on("end", () => {
-      try {
-        const parsed = JSON.parse(body || "{}");
-        const city = parsed.city || "";
-        const country = parsed.country_name || parsed.country || "";
-        memoryLocation = sanitizeLocation(city, country);
-      } catch (_) {
-        memoryLocation = "unknown";
-      }
-      writeCache(memoryLocation || "unknown");
+
+    req.setTimeout(4000, () => {
+      try { req.destroy(); } catch (_) {}
+      fetchWithRetry(index + 1);
     });
-  });
 
-  req.setTimeout(1500, () => {
-    try {
-      req.destroy();
-    } catch (_) {}
-    if (!memoryLocation) memoryLocation = "unknown";
-  });
-
-  req.on("error", () => {
-    if (!memoryLocation) memoryLocation = "unknown";
-  });
+    req.on("error", () => {
+      fetchWithRetry(index + 1);
+    });
+  } catch (_) {
+    fetchWithRetry(index + 1);
+  }
 }
 
 function primeLocation(cacheFilePath) {
   setCachePath(cacheFilePath);
-  if (!memoryLocation) {
+  if (!memoryLocation || memoryLocation === "unknown") {
     memoryLocation = readCacheSync() || "unknown";
   }
-  fetchLocationOnce();
+  // De-prioritize network fetch: wait 8 seconds so it doesn't slow down startup
+  setTimeout(() => {
+    fetchWithRetry(0);
+  }, 8000);
 }
 
 function getLocation() {
