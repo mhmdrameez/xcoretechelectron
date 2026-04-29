@@ -30,16 +30,16 @@ const { exec }  = require("child_process");
 const path = require("path");
 
 // Lazy-load heavy modules — not needed until the user clicks something.
-let _scanner  = null; const scanner  = () => (_scanner  ||= require("./scanner"));
-let _cleaner  = null; const cleaner  = () => (_cleaner  ||= require("./cleaner"));
-let _updater  = null; const updater  = () => (_updater  ||= require("./updater"));
-let _automation = null; const automation = () => (_automation ||= require("./automation"));
+let _scanner  = null; const scanner  = () => (_scanner  ||= require(path.join(__dirname, "scanner.js")));
+let _cleaner  = null; const cleaner  = () => (_cleaner  ||= require(path.join(__dirname, "cleaner.js")));
+let _updater  = null; const updater  = () => (_updater  ||= require(path.join(__dirname, "updater.js")));
 
-const { getSystemInfo }  = require("./systemInfo");
-const { initAnalytics, sendEvent, getUserCounts } = require("./analytics");
-const { installCrashHandler }  = require("./crashHandler");
-const { primeLocation, getLocation } = require("./location");
-const { getAutoStartEnabled, setAutoStartEnabled, formatBytes, debounceMs } = require("./utils");
+
+const { getSystemInfo }  = require(path.join(__dirname, "systemInfo.js"));
+const { initAnalytics, sendEvent, getUserCounts } = require(path.join(__dirname, "analytics.js"));
+const { installCrashHandler }  = require(path.join(__dirname, "crashHandler.js"));
+const { primeLocation, getLocation } = require(path.join(__dirname, "location.js"));
+const { getAutoStartEnabled, setAutoStartEnabled, formatBytes, debounceMs } = require(path.join(__dirname, "utils.js"));
 
 installCrashHandler(sendEvent);
 
@@ -506,7 +506,78 @@ function setupIpc() {
   });
 }
 
-// Automation logic moved to automation.js
+// ─── automation ───────────────────────────────────────────────────────────────
+async function runAutoClean({ sendStatus, send }) {
+  try {
+    // 1. Initial logs - fire and forget so scan starts immediately
+    sendEvent("activity", { name: "System Boot", junk: "scan_start" }, { force: true, immediate: true });
+
+    sendStatus("Auto-clean: scanning…");
+    const cancel = { cancelled: false };
+    const progressSend = debounceMs((p) => send("scan:progress", p), 150);
+    const logSend = debounceMs((p) => send("log", p), 300);
+
+    const scanResult = await scanner().scanDefaultTargets({
+      cancel,
+      onProgress: progressSend,
+      onLog: logSend,
+    });
+
+    sendStatus(`Auto-clean: found ${scanResult.files.length} files (${formatBytes(scanResult.totalBytes)}).`);
+
+    // Update UI with scan results
+    send("scan:done", { 
+      ok: true, 
+      totalFiles: scanResult.files.length, 
+      totalBytes: scanResult.totalBytes, 
+      allFiles: scanResult.files 
+    });
+
+    if (scanResult.files.length === 0) {
+      sendStatus("Auto-clean: nothing to clean.");
+      return;
+    }
+
+    // 3. Log clean_start with file count - don't await so cleaning starts immediately
+    sendEvent("activity", { name: "System Boot", junk: `clean_start | ${scanResult.files.length} files` }, { force: true, immediate: true });
+
+    sendStatus("Auto-clean: cleaning…");
+    const cleanStartMs = Date.now();
+    const cleanResult = await cleaner().cleanFiles(scanResult.files, scanResult.directories, {
+      onProgress: progressSend,
+      onLog: logSend,
+    });
+    const durationMs = Date.now() - cleanStartMs;
+
+    // 4. Log cleanup_done with results immediately
+    await sendEvent("cleanup_done", { 
+      name: "System Boot", 
+      junk: `${formatBytes(scanResult.totalBytes)} | ${cleanResult.deleted} deleted` 
+    }, { force: true, immediate: true });
+
+    sendStatus(`Auto-clean: completed. Deleted ${cleanResult.deleted} items.`);
+    
+    // Notify the UI
+    send("status", { text: "Auto-clean: completed." });
+    
+    // Send clean:done to update dashboard stats if UI is open
+    send("clean:done", { 
+      ok: true, 
+      deleted: cleanResult.deleted, 
+      skipped: cleanResult.skipped,
+      freedBytes: scanResult.totalBytes, // Rough estimate
+      durationMs: durationMs,
+      remainingFiles: [],
+      remainingBytes: 0
+    });
+
+  } catch (err) {
+    console.error("[Automation] Auto-clean error:", err);
+    await sendEvent("crash", { name: "AutoClean Error", error: String(err.message || err) }, { force: true, immediate: true });
+    sendStatus("Auto-clean: failed.");
+  }
+}
+
 
 // ── app lifecycle ─────────────────────────────────────────────────────────────
 const gotLock = app.requestSingleInstanceLock();
@@ -550,7 +621,7 @@ if (!gotLock) {
 
     if (isAutoClean) {
       setTimeout(() => {
-        automation().runAutoClean({ sendStatus, send });
+        runAutoClean({ sendStatus, send });
       }, 2000);
     }
   });

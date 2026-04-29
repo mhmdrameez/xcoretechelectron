@@ -34,7 +34,6 @@
       "renderer.js",
       "scanner.js",
       "cleaner.js",
-      "automation.js",
       "utils.js",
       "systemInfo.js",
       "analytics.js",

@@ -1,7 +1,7 @@
 "use strict";
 const fs   = require("fs");
 const path = require("path");
-const { isProbablyUnsafeSystemPath } = require("./utils");
+const { isProbablyUnsafeSystemPath } = require(path.join(__dirname, "utils.js"));
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
