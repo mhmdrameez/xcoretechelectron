@@ -81,7 +81,7 @@ Starts Electron with optimized V8 flags (`--max-old-space-size=96`) for performa
 npm run dist
 ```
 
-Output: `dist/XCoreTech Disk Cleaner Setup 1.0.0.exe`  
+Output: `dist/XCoreTech Disk Cleaner Setup 1.3.0.exe`  
 The installer is configured for **per-user** installation, requiring no admin rights.
 
 ---

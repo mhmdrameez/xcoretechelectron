@@ -1,9 +1,9 @@
 {
   "name": "xcoretech-disk-cleaner",
-  "version": "1.0.0",
+  "version": "1.3.0",
   "description": "Lightweight disk cleaner built with Electron",
   "main": "index.js",
-  "author": "",
+  "author": "Rameez",
   "license": "MIT",
   "private": true,
   "scripts": {
@@ -48,6 +48,7 @@
     "compression": "maximum",
     "win": {
       "icon": "assets/app-icon.ico",
+      "publisherName": "Rameez",
       "requestedExecutionLevel": "asInvoker",
       "target": [
         {
