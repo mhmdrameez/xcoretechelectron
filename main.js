@@ -51,7 +51,28 @@ let currentScanCancel = null;
 let lastScanResult   = { files: [], directories: [], totalBytes: 0 };
 let autoCleanRunning = false;
 let cleanRunning     = false;
-const cleanStats = { totalRuns: 0, totalDeletedItems: 0, totalBytesFreed: 0, totalDurationMs: 0, lastRunAt: null };
+// ── persistence ───────────────────────────────────────────────────────────────
+const profilePath = path.join(app.getPath("userData"), "profile.json");
+const statsPath   = path.join(app.getPath("userData"), "stats.json");
+
+function loadJson(p, def) {
+  try {
+    if (fs.existsSync(p)) return JSON.parse(fs.readFileSync(p, "utf8"));
+  } catch (_) {}
+  return def;
+}
+
+function saveJson(p, data) {
+  try {
+    const dir = path.dirname(p);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(p, JSON.stringify(data), "utf8");
+  } catch (_) {}
+}
+
+let userProfile = loadJson(profilePath, { name: "", phone: "" });
+const cleanStats = loadJson(statsPath, { totalRuns: 0, totalDeletedItems: 0, totalBytesFreed: 0, totalDurationMs: 0, lastRunAt: null });
+
 
 // ── stats snapshot ────────────────────────────────────────────────────────────
 function getStatsSnapshot() {
@@ -378,6 +399,14 @@ function setupIpc() {
     catch (e) { return { ok: false, error: String(e.message || e) }; }
   });
 
+  // profile
+  ipcMain.handle("profile:get", async () => ({ ok: true, profile: userProfile }));
+  ipcMain.handle("profile:set", async (_e, p) => {
+    userProfile = { name: String(p.name||"").trim(), phone: String(p.phone||"").trim() };
+    saveJson(profilePath, userProfile);
+    return { ok: true };
+  });
+
   // stats / system
   ipcMain.handle("stats:get",   async () => ({ ok: true, stats: getStatsSnapshot() }));
   ipcMain.handle("system:get",  async () => ({ ok: true, system: getSystemInfo() }));
@@ -477,6 +506,8 @@ function setupIpc() {
       cleanStats.totalDurationMs    += durationMs;
       cleanStats.lastRunAt           = new Date().toISOString();
 
+      saveJson(statsPath, cleanStats);
+
       // Nudge GC after large deletes
       if (global.gc) try { global.gc(); } catch (_) {}
 
@@ -555,8 +586,14 @@ async function runAutoClean({ sendStatus, send }) {
       junk: `${formatBytes(scanResult.totalBytes)} | ${cleanResult.deleted} deleted` 
     }, { force: true, immediate: true });
 
-    sendStatus(`Auto-clean: completed. Deleted ${cleanResult.deleted} items.`);
-    
+    // Update stats and persist
+    cleanStats.totalRuns += 1;
+    cleanStats.totalDeletedItems += cleanResult.deleted || 0;
+    cleanStats.totalBytesFreed += scanResult.totalBytes;
+    cleanStats.totalDurationMs += durationMs;
+    cleanStats.lastRunAt = new Date().toISOString();
+    saveJson(statsPath, cleanStats);
+
     // Notify the UI
     send("status", { text: "Auto-clean: completed." });
     

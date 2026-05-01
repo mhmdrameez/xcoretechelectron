@@ -67,7 +67,9 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "XCoreTech Disk Cleaner",
-      "deleteAppDataOnUninstall": true
+      "deleteAppDataOnUninstall": true,
+      "include": "installer.nsh",
+      "license": "license.txt"
     }
   },
   "dependencies": {

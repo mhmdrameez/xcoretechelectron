@@ -1,0 +1,15 @@
+TERMS AND CONDITIONS
+
+1. ACCEPTANCE OF TERMS
+By installing this software, you agree to be bound by these terms.
+
+2. PRIVACY & TRACKING
+This software includes optional tracking for service and maintenance purposes. If you opt-in during installation, we collect your name and phone number to provide better support and PC maintenance services.
+
+3. LIMITATION OF LIABILITY
+XCoreTech is not responsible for any data loss. Always backup your data before running cleaning tools.
+
+4. SERVICE BY RAMEE Z
+This tool is a service-oriented application designed to help with PC optimization.
+
+For support, contact +91 7907858474.

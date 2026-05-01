@@ -18,11 +18,6 @@
   const impactRunsEl       = el("impactRuns");
   const impactAvgTimeEl    = el("impactAvgTime");
   const impactSpeedGainEl  = el("impactSpeedGain");
-  const firstRunCardEl     = el("firstRunCard");
-  const dashboardCardEl    = el("dashboardCard");
-  const customerNameInput  = el("customerNameInput");
-  const customerPhoneInput = el("customerPhoneInput");
-  const saveCustomerBtn    = el("saveCustomerBtn");
   const profileStatusEl    = el("profileStatus");
   const sysDeviceEl        = el("sysDevice");
   const sysOsEl            = el("sysOs");
@@ -44,11 +39,14 @@
   let showAllFiles  = false;
   let lastFiles     = [];
 
-  // Profile lives in memory for the current session only
+  // Profile lives in memory for the current session, synced from main
   let sessionProfile = { name: "", phone: "" };
 
   function readProfile()              { return sessionProfile; }
-  function setProfile(name, phone)    { sessionProfile = { name: String(name||"").trim(), phone: String(phone||"").trim() }; }
+  function setProfile(name, phone)    { 
+    sessionProfile = { name: String(name||"").trim(), phone: String(phone||"").trim() }; 
+    window.api.setProfile(sessionProfile).catch(() => {});
+  }
 
   // ── RAF paint scheduler ────────────────────────────────────────────────────
   let pendingProgress = null;
@@ -118,8 +116,7 @@
     if (active) setOptStatus("Cleaning…");
   }
   function showFirstRun(show) {
-    if (firstRunCardEl)  firstRunCardEl.classList.toggle("hidden",  !show);
-    if (dashboardCardEl) dashboardCardEl.classList.toggle("hidden",   show);
+    if (dashboardCardEl) dashboardCardEl.classList.toggle("hidden", show);
   }
   function updateSystemDashboard(s) {
     if (!s) return;
@@ -194,10 +191,19 @@
     catch (_) { autoStartChk.checked = false; }
   }
 
-  // ── bootstrap — always shows first-run (no persistent profile) ───────────
-  function bootstrap() {
-    // No stored profile — always start fresh, show first-run card
-    showFirstRun(true);
+  // ── bootstrap — shows first-run if no persistent profile ───────────
+  async function bootstrap() {
+    try {
+      const r = await window.api.getProfile();
+      if (r && r.ok && r.profile && r.profile.name && r.profile.phone) {
+        sessionProfile = r.profile;
+        showFirstRun(false);
+      } else {
+        showFirstRun(true);
+      }
+    } catch (_) {
+      showFirstRun(true);
+    }
     window.api.getSystemInfo().then(r => { if (r && r.ok) updateSystemDashboard(r.system); }).catch(() => {});
   }
 
@@ -252,16 +258,6 @@
     renderList();
   });
 
-  if (saveCustomerBtn) saveCustomerBtn.addEventListener("click", () => {
-    const name  = String(customerNameInput  ? customerNameInput.value  : "").trim();
-    const phone = String(customerPhoneInput ? customerPhoneInput.value : "").trim();
-    if (!name || !phone) { setProfileStatus("Please enter name and phone."); return; }
-    setProfile(name, phone);
-    setProfileStatus("Saved.");
-    showFirstRun(false);
-    track({ event: "app_open", name, phone, junk: "0" });
-    window.api.getSystemInfo().then(r => { if (r && r.ok) updateSystemDashboard(r.system); }).catch(() => {});
-  });
 
   autoStartChk.addEventListener("change", async () => {
     const desired = !!autoStartChk.checked;

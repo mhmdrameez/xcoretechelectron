@@ -24,6 +24,8 @@ contextBridge.exposeInMainWorld("api", {
   getSystemInfo:      ()            => ipcRenderer.invoke("system:get"),
   getCounts:          ()            => ipcRenderer.invoke("analytics:getCounts"),
   trackEvent:         (p)           => ipcRenderer.invoke("analytics:track", p || {}),
+  getProfile:         ()            => ipcRenderer.invoke("profile:get"),
+  setProfile:         (p)           => ipcRenderer.invoke("profile:set", p),
   updateInstall:      ()            => ipcRenderer.invoke("update:install"),
   updateCheck:        ()            => ipcRenderer.invoke("update:check"),
   getStartupList:     ()            => ipcRenderer.invoke("startup:list"),
