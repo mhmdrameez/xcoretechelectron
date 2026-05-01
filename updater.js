@@ -48,8 +48,9 @@ function initUpdater(sendFn) {
   });
 
   autoUpdater.on("error", (err) => {
-    // Silently ignore errors in production — updates are best-effort
-    safeSend("update:status", { phase: "error", message: String(err && err.message ? err.message : err) });
+    // Silently ignore errors — updates are best-effort background tasks.
+    // We don't notify the renderer to avoid showing "check failed" banners.
+    // Console log if not in production? autoUpdater.logger handles that if set.
   });
 
   // IPC: renderer requests install now

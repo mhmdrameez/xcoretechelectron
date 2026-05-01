@@ -1,15 +1,16 @@
-TERMS AND CONDITIONS
+END USER LICENSE AGREEMENT (EULA)
 
-1. ACCEPTANCE OF TERMS
-By installing this software, you agree to be bound by these terms.
+1. LICENSE GRANT
+XCoreTech Team grants you a non-exclusive license to use this software for PC optimization and maintenance purposes. This software is proprietary and protected by copyright laws.
 
-2. PRIVACY & TRACKING
-This software includes optional tracking for service and maintenance purposes. If you opt-in during installation, we collect your name and phone number to provide better support and PC maintenance services.
+2. PRIVACY & DATA POLICY
+This application operates with complete anonymity. No personal data (names, phone numbers, or emails) is collected or stored. We collect only technical system identifiers (Hostname, CPU, RAM) and anonymous usage statistics to improve optimization accuracy.
 
-3. LIMITATION OF LIABILITY
-XCoreTech is not responsible for any data loss. Always backup your data before running cleaning tools.
+3. RESTRICTIONS
+You may not decompile, reverse engineer, or redistribute this software without explicit written permission from XCoreTech Team.
 
-4. SERVICE BY RAMEE Z
-This tool is a service-oriented application designed to help with PC optimization.
+4. DISCLAIMER OF WARRANTY
+This software is provided "as is". XCoreTech Team is not liable for any data loss or system instability. Users are advised to maintain regular backups.
 
-For support, contact +91 7907858474.
+5. SUPPORT & MAINTENANCE
+For professional support and corporate inquiries, contact: +91 7907858474.

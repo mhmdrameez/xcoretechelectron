@@ -52,7 +52,6 @@ let lastScanResult   = { files: [], directories: [], totalBytes: 0 };
 let autoCleanRunning = false;
 let cleanRunning     = false;
 // ── persistence ───────────────────────────────────────────────────────────────
-const profilePath = path.join(app.getPath("userData"), "profile.json");
 const statsPath   = path.join(app.getPath("userData"), "stats.json");
 
 function loadJson(p, def) {
@@ -70,7 +69,6 @@ function saveJson(p, data) {
   } catch (_) {}
 }
 
-let userProfile = loadJson(profilePath, { name: "", phone: "" });
 const cleanStats = loadJson(statsPath, { totalRuns: 0, totalDeletedItems: 0, totalBytesFreed: 0, totalDurationMs: 0, lastRunAt: null });
 
 
@@ -125,9 +123,9 @@ function createTray() {
   if (!iconPath) return;
   try {
     tray = new Tray(nativeImage.createFromPath(iconPath));
-    tray.setToolTip("XCoreTech Disk Cleaner");
+    tray.setToolTip("XCoreTech PC Optimizer");
     tray.setContextMenu(Menu.buildFromTemplate([
-      { label: "Open Cleaner", click: showMainWindow },
+      { label: "Open Optimizer", click: showMainWindow },
       { label: "Exit", click: () => { isQuitting = true; app.quit(); } },
     ]));
     tray.on("click", showMainWindow);
@@ -397,14 +395,6 @@ function setupIpc() {
   ipcMain.handle("startup:setEnabled", async (_e, { name, approvedKey, regFlag, enable }) => {
     try { return await setStartupItemEnabled(name, approvedKey, regFlag, !!enable); }
     catch (e) { return { ok: false, error: String(e.message || e) }; }
-  });
-
-  // profile
-  ipcMain.handle("profile:get", async () => ({ ok: true, profile: userProfile }));
-  ipcMain.handle("profile:set", async (_e, p) => {
-    userProfile = { name: String(p.name||"").trim(), phone: String(p.phone||"").trim() };
-    saveJson(profilePath, userProfile);
-    return { ok: true };
   });
 
   // stats / system

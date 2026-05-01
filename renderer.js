@@ -18,8 +18,12 @@
   const impactRunsEl       = el("impactRuns");
   const impactAvgTimeEl    = el("impactAvgTime");
   const impactSpeedGainEl  = el("impactSpeedGain");
-  const profileStatusEl    = el("profileStatus");
+  const dashboardCardEl    = el("dashboardCard");
   const sysDeviceEl        = el("sysDevice");
+  const startupSection     = el("startupSection");
+  const startupListEl      = el("startupList");
+  const startupRefreshBtn  = el("startupRefreshBtn");
+  const startupStatusEl    = el("startupStatusEl");
   const sysOsEl            = el("sysOs");
   const sysCpuEl           = el("sysCpu");
   const sysRamEl           = el("sysRam");
@@ -38,15 +42,6 @@
   let cleaning      = false;
   let showAllFiles  = false;
   let lastFiles     = [];
-
-  // Profile lives in memory for the current session, synced from main
-  let sessionProfile = { name: "", phone: "" };
-
-  function readProfile()              { return sessionProfile; }
-  function setProfile(name, phone)    { 
-    sessionProfile = { name: String(name||"").trim(), phone: String(phone||"").trim() }; 
-    window.api.setProfile(sessionProfile).catch(() => {});
-  }
 
   // ── RAF paint scheduler ────────────────────────────────────────────────────
   let pendingProgress = null;
@@ -97,13 +92,25 @@
   // ── DOM setters ────────────────────────────────────────────────────────────
   function setStatus(t)        { if (statusTextEl)    statusTextEl.textContent    = t || ""; }
   function setOptStatus(t)     { if (optStatusEl)     optStatusEl.textContent     = t || "Idle"; }
-  function setProfileStatus(t) { if (profileStatusEl) profileStatusEl.textContent = t || ""; }
+  function pingMetric(el) {
+    if (!el) return;
+    const parent = el.closest(".metric");
+    if (!parent) return;
+    parent.classList.remove("updated");
+    void parent.offsetWidth; // trigger reflow
+    parent.classList.add("updated");
+    setTimeout(() => parent.classList.remove("updated"), 400);
+  }
+
   function setTotals(f, b) {
-    if (totalFilesEl) totalFilesEl.textContent = String(f | 0);
-    if (totalSizeEl)  totalSizeEl.textContent  = formatBytes(b);
+    if (totalFilesEl) { totalFilesEl.textContent = String(f | 0); pingMetric(totalFilesEl); }
+    if (totalSizeEl)  { totalSizeEl.textContent  = formatBytes(b); pingMetric(totalSizeEl); }
   }
   function setProgress(pct) {
-    if (progressPctEl) progressPctEl.textContent = `${Math.max(0, Math.min(100, pct | 0))}%`;
+    if (progressPctEl) {
+      progressPctEl.textContent = `${Math.max(0, Math.min(100, pct | 0))}%`;
+      if (pct % 10 === 0) pingMetric(progressPctEl); // Ping every 10% to avoid too much flickering
+    }
   }
   function setButtons() {
     const noFiles = (totalFilesEl ? Number(totalFilesEl.textContent) : 0) <= 0;
@@ -116,7 +123,7 @@
     if (active) setOptStatus("Cleaning…");
   }
   function showFirstRun(show) {
-    if (dashboardCardEl) dashboardCardEl.classList.toggle("hidden", show);
+    if (dashboardCardEl) dashboardCardEl.classList.toggle("hidden", false);
   }
   function updateSystemDashboard(s) {
     if (!s) return;
@@ -180,9 +187,8 @@
   }
 
   function trackActivity(action, extra) {
-    const p    = readProfile();
     const note = [action, extra].filter(Boolean).join(" | ").slice(0, 18);
-    track({ event: "activity", name: p.name || "unknown", phone: p.phone || "unknown", junk: note || "activity" });
+    track({ event: "activity", name: "System User", phone: "unknown", junk: note || "activity" });
   }
 
   // ── auto-start ─────────────────────────────────────────────────────────────
@@ -191,20 +197,16 @@
     catch (_) { autoStartChk.checked = false; }
   }
 
-  // ── bootstrap — shows first-run if no persistent profile ───────────
+  // ── bootstrap — always shows dashboard ───────────
   async function bootstrap() {
-    try {
-      const r = await window.api.getProfile();
-      if (r && r.ok && r.profile && r.profile.name && r.profile.phone) {
-        sessionProfile = r.profile;
-        showFirstRun(false);
-      } else {
-        showFirstRun(true);
+    // Always show dashboard
+    showFirstRun(false);
+    
+    window.api.getSystemInfo().then(r => { 
+      if (r && r.ok) {
+        updateSystemDashboard(r.system); 
       }
-    } catch (_) {
-      showFirstRun(true);
-    }
-    window.api.getSystemInfo().then(r => { if (r && r.ok) updateSystemDashboard(r.system); }).catch(() => {});
+    }).catch(() => {});
   }
 
   // ── event listeners ────────────────────────────────────────────────────────
@@ -316,8 +318,7 @@
     if (toggleFilesBtn) toggleFilesBtn.style.display = "none";
     if (p.stats) updateImpactCards(p.stats);
 
-    const profile = readProfile();
-    track({ event: "cleanup_done", name: profile.name, phone: profile.phone, junk: formatBytes(p.freedBytes || 0) });
+    track({ event: "cleanup_done", name: "System User", phone: "unknown", junk: formatBytes(p.freedBytes || 0) });
     trackActivity("clean_ok", formatBytes(p.freedBytes || 0));
     setOptStatus("Improved");
     setButtons();
@@ -358,9 +359,8 @@
 
   if (window.api.onUpdateStatus) {
     window.api.onUpdateStatus((s) => {
-      // Only show banner for non-trivial states
-      if (s.phase === "error") showBanner("⚠️ Update check failed", null, false);
-      // "latest" and "checking" — keep banner hidden
+      // Only show banner for non-trivial states (available, progress, downloaded)
+      // "error", "latest", and "checking" — keep banner hidden
     });
   }
 
@@ -373,18 +373,11 @@
   }
 
   // ── Startup Programs Panel ──────────────────────────────────────────────────
-  const startupPanelEl       = el("startupPanel");
-  const startupToggleHeader  = el("startupToggleHeader");
-  const startupListEl        = el("startupList");
-  const startupEmptyEl       = el("startupEmpty");
-  const startupRefreshBtnEl  = el("startupRefreshBtn");
-  const startupStatusEl2     = el("startupStatusEl");
-
   let startupItems = [];
   let startupLoading = false;
 
   function setStartupStatus(msg) {
-    if (startupStatusEl2) startupStatusEl2.textContent = msg || "";
+    if (startupStatusEl) startupStatusEl.textContent = msg || "";
   }
 
   function renderStartupList() {
@@ -399,22 +392,14 @@
       row.className = "startupRow";
       row.dataset.id = item.id;
 
-      const toggleLabel = document.createElement("label");
-      toggleLabel.className = "startupToggle";
-
-      const chk = document.createElement("input");
-      chk.type = "checkbox";
-      chk.checked = item.enabled;
-      chk.disabled = !item.canToggle;
-      chk.title = item.canToggle
-        ? (item.enabled ? "Click to disable" : "Click to enable")
-        : "Cannot toggle this entry";
-
-      const slider = document.createElement("span");
-      slider.className = "startupSlider";
-
-      toggleLabel.appendChild(chk);
-      toggleLabel.appendChild(slider);
+      // Icon placeholder
+      const icon = document.createElement("div");
+      icon.className = "startupIcon";
+      const iconText = item.name.toLowerCase().includes("edge") ? "🌐" :
+                       item.name.toLowerCase().includes("onedrive") ? "☁️" :
+                       item.name.toLowerCase().includes("security") ? "🛡️" :
+                       item.name.toLowerCase().includes("amd") || item.name.toLowerCase().includes("nvidia") ? "🎮" : "📦";
+      icon.textContent = iconText;
 
       const info = document.createElement("div");
       info.className = "startupInfo";
@@ -429,16 +414,41 @@
       cmdEl.textContent = item.command;
       cmdEl.title = item.command;
 
-      info.appendChild(nameEl);
-      info.appendChild(cmdEl);
+      const meta = document.createElement("div");
+      meta.className = "startupMeta";
 
       const hiveEl = document.createElement("span");
-      hiveEl.className = "startupHive";
-      hiveEl.textContent = item.source || item.hive;
+      const source = item.source || item.hive || "";
+      hiveEl.className = `startupHive ${source.includes("HKLM") ? "system" : ""}`;
+      hiveEl.textContent = source;
 
-      row.appendChild(toggleLabel);
+      // Simulated Impact for UX
+      const impact = document.createElement("span");
+      const isHigh = item.command.toLowerCase().includes("exe") && item.command.length > 50;
+      const isMed  = item.command.toLowerCase().includes("background");
+      impact.className = `startupImpact ${isHigh ? "impact-high" : isMed ? "impact-low" : "impact-medium"}`;
+      impact.textContent = isHigh ? "High Impact" : isMed ? "Minimal" : "Measured";
+
+      meta.appendChild(hiveEl);
+      meta.appendChild(impact);
+
+      info.appendChild(nameEl);
+      info.appendChild(cmdEl);
+      info.appendChild(meta);
+
+      const toggleLabel = document.createElement("label");
+      toggleLabel.className = "startupToggle";
+
+      const chk = document.createElement("input");
+      chk.type = "checkbox";
+      chk.checked = item.enabled;
+      chk.disabled = !item.canToggle;
+      
+      toggleLabel.appendChild(chk);
+
+      row.appendChild(icon);
       row.appendChild(info);
-      row.appendChild(hiveEl);
+      row.appendChild(toggleLabel);
 
       // Toggle event
       if (item.canToggle) chk.addEventListener("change", async () => {
@@ -493,27 +503,8 @@
     }
   }
 
-  // Collapsible toggle
-  if (startupToggleHeader) {
-    startupToggleHeader.addEventListener("click", (e) => {
-      // Don't toggle when clicking refresh button
-      if (e.target.closest("#startupRefreshBtn")) return;
-      if (!startupPanelEl) return;
-      const isOpen = startupPanelEl.classList.toggle("open");
-      // Auto-load on first open
-      if (isOpen && !startupItems.length && !startupLoading) {
-        loadStartupPrograms();
-      }
-    });
-  }
-
-  if (startupRefreshBtnEl) {
-    startupRefreshBtnEl.addEventListener("click", (e) => {
-      e.stopPropagation();
-      // Auto-open panel
-      if (startupPanelEl && !startupPanelEl.classList.contains("open")) {
-        startupPanelEl.classList.add("open");
-      }
+  if (startupRefreshBtn) {
+    startupRefreshBtn.addEventListener("click", () => {
       loadStartupPrograms();
     });
   }
@@ -524,6 +515,7 @@
     setBusy(false);
     bootstrap();
     refreshAutoStart();
+    loadStartupPrograms(); // Auto-load on init
 
     // Stats from main process (in-memory, no file read needed now)
     window.api.getStats().then(r => { if (r && r.ok && r.stats) updateImpactCards(r.stats); }).catch(() => {});

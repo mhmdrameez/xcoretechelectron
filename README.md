@@ -1,13 +1,13 @@
-# 🛡️ XCoreTech Disk Cleaner
+# 🛡️ XCoreTech PC Optimizer
 
-> **Lightweight, high-performance Windows disk cleaner built with Electron.**  
-> Removes junk from temp, cache, prefetch, and system residue folders — fast, safe, and with near-native resource usage.
+> **Advanced, high-performance Windows PC optimizer and cleaner built with Electron.**  
+> Maximizes system performance by removing junk from temp, cache, prefetch, and system residue folders — fast, safe, and with ultra-low resource usage.
 
 ---
 
 ## 📸 Screenshot
 
-![XCoreTech Disk Cleaner](./screenshot.png)
+![XCoreTech PC Optimizer](./screenshot.png)
 
 ---
 
@@ -81,7 +81,7 @@ Starts Electron with optimized V8 flags (`--max-old-space-size=96`) for performa
 npm run dist
 ```
 
-Output: `dist/XCoreTech Disk Cleaner Setup 1.3.0.exe`  
+Output: `dist/XCoreTech PC Optimizer Setup 1.3.0.exe`  
 The installer is configured for **per-user** installation, requiring no admin rights.
 
 ---
@@ -189,7 +189,7 @@ Default paths scanned (Windows):
 
 ## 🤖 Background Automation
 
-XCoreTech is designed to be "set and forget." It automatically registers itself to run at login with specialized flags:
+XCoreTech PC Optimizer is designed to be "set and forget." It automatically registers itself to run at login with specialized flags:
 
 ### Maintenance Sequence
 1. **Boot Launch**: App starts hidden in the tray immediately after system login.
