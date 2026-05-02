@@ -19,28 +19,24 @@
   <div id="app">
     <!-- ── Professional Header ── -->
     <header class="header">
-      <div class="brand">
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <div class="appname">XCoreTech PC Optimizer</div>
-          <div id="proBadge" class="proBadge free">FREE</div>
-        </div>
-        <div class="subtitle">System Analytics & Advanced Performance Tuning</div>
-      </div>
-      
-      <div id="trustedBadge" class="trustedBadge" title="Verified users who trust XCoreTech PC Optimizer">
-        <span class="tIcon">🛡️</span>
-        <div style="display:flex; flex-direction:column;">
-          <span class="tLabel">Verified Trust</span>
-          <span class="tCount" id="trustedCount">0 Users</span>
+      <div class="header-left">
+        <div class="brand">
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 4px;">
+            <div class="appname">XCoreTech PC Optimizer</div>
+            <div id="proBadge" class="proBadge free">FREE</div>
+            <div id="trustedBadge" class="trustedBadge" title="Verified users who trust XCoreTech PC Optimizer" style="display:none; align-items: center; gap: 6px; padding: 4px 10px; background: var(--bg-panel-alt); border-radius: 20px; border: 1px solid var(--border-main);">
+              <span class="tIcon" style="font-size: 13px;">🛡️</span>
+              <span class="tCount" id="trustedCount" style="font-size: 11px; font-weight: 700; color: var(--text-main); letter-spacing: 0.05em;">0+ Users</span>
+            </div>
+          </div>
+          <div class="subtitle">System Analytics & Advanced Performance Tuning</div>
         </div>
       </div>
 
-      <button id="goProBtn" class="btn ghostBtn proActionBtn">
-        <span>🔒</span> Activate Pro
-      </button>
-
-      <div class="actions">
-
+      <div class="header-right" style="display: flex; gap: 12px; align-items: center;">
+        <button id="goProBtn" class="btn ghostBtn proActionBtn">
+          <span>🔒</span> Activate Pro
+        </button>
         <button id="scanBtn" class="btn primary">
           <span>🔍</span> Scan System
         </button>
@@ -154,21 +150,12 @@
           <div class="modalTitle">Activate Pro Version</div>
         </div>
         
-        <div id="licenseInfoText" style="font-size: 12px; color: var(--text-muted); line-height: 1.6; margin-bottom: 24px; text-align: justify; max-height: 240px; overflow-y: auto; padding-right: 8px; border-right: 1px solid var(--border-main);">
-          <p style="margin-bottom: 12px;">🔒 <strong>Activate Pro Version</strong> to unlock the complete power of automatic system cleaning and startup optimization. This Pro upgrade is designed to give you a seamless, hands-free experience by enabling advanced features that automatically maintain your system’s performance in the background. Once activated, your system will benefit from intelligent cleanup routines, improved startup efficiency, and continuous optimization without requiring any manual intervention. This ensures that your device stays fast, responsive, and free from unnecessary temporary files and clutter over time.</p>
-          
-          <p style="margin-bottom: 12px;">To begin, please enter your valid license key in the field below. Your license key is a unique code provided at the time of purchase and is required to securely unlock Pro features. The activation process is quick and secure, and your license will be verified instantly using <strong>Supabase</strong>, which ensures reliable validation and protection against unauthorized usage. This verification step guarantees that every license is authentic and helps maintain the integrity of the software for all users.</p>
-
-          <p style="margin-bottom: 12px;">Each license is valid for <strong>one device only</strong>. During activation, your license will be securely linked to your current device using a unique system identifier. This prevents the same license from being used on multiple devices and ensures fair usage across all users. If your license has already been activated on another device, or if there is a mismatch in device verification, the activation process may fail. In such cases, you will receive a clear message explaining the issue.</p>
-
-          <p style="margin-bottom: 12px;">After successful activation, all Pro features will be immediately unlocked. These include automatic cleaning of temporary files during system startup, background optimization processes that run silently without interrupting your workflow, and enhanced performance management to keep your system running at its best. You will no longer need to manually clean or optimize your system, as the software will handle everything efficiently in the background.</p>
-
-          <p style="margin-bottom: 12px;">Please ensure that you enter your license key exactly as provided, including all characters, hyphens, and formatting. License keys are case-sensitive, and even a small mistake can result in a validation error. If your key is invalid, expired, or incorrectly entered, you will be prompted to try again. Make sure to double-check your key before submitting it.</p>
-
-          <p style="margin-bottom: 12px;">Your privacy and security are important. The activation process only uses minimal information necessary for license verification, such as your license key and a basic device identifier. No personal files or sensitive data are accessed or stored during this process. All communication with the activation system is handled securely to protect your information.</p>
-
-          <p>Once your license is activated, you can start enjoying a faster, cleaner, and more optimized system immediately. Thank you for choosing to activate the Pro version and support the continued development of this software.</p>
-        </div>
+        <p id="licenseInfoText" style="font-size: 13px; color: var(--text-muted); line-height: 1.6; margin-bottom: 24px;">
+          🔒 <strong>Activate Pro Version</strong> to unlock automatic cleaning and startup optimization. 
+          Enter your license key below to enable full background maintenance on this device. 
+          Each license is valid for <strong>one device only</strong> and is securely verified online. 
+          Once activated, all Pro features will be immediately unlocked and run silently in the background.
+        </p>
 
         <div style="margin-bottom: 20px;">
           <label style="display: block; font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; margin-bottom: 8px;">License Key</label>
@@ -208,7 +195,7 @@
       <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--text-dim);">
         <div>© 2024 XCoreTech Team. All Rights Reserved.</div>
         <div style="display: flex; gap: 16px;">
-          <span>Version 1.3.0</span>
+          <span>Version 1.3.3</span>
           <span>Commercial License</span>
         </div>
       </div>

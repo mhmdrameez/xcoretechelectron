@@ -603,13 +603,72 @@
     // Stats from main process (in-memory, no file read needed now)
     window.api.getStats().then(r => { if (r && r.ok && r.stats) updateImpactCards(r.stats); }).catch(() => {});
 
-    // User count badge
-    window.api.getCounts().then(r => {
-      if (r && r.ok && r.total > 0) {
-        if (trustedCountEl) trustedCountEl.textContent = r.total;
-        if (trustedBadgeEl) trustedBadgeEl.classList.add("visible");
+    // User count badge (100% Real Count, Fast Frontend Fetch with Local Cache)
+    let currentDisplayCount = 0;
+    const cachedCountStr = localStorage.getItem("xcore_user_count");
+    let cachedCount = cachedCountStr ? parseInt(cachedCountStr, 10) : 0;
+    
+    if (trustedBadgeEl) {
+      trustedBadgeEl.style.display = "flex"; // Ensure it's always visible
+      trustedBadgeEl.classList.add("visible");
+      if (trustedCountEl) {
+        if (cachedCount > 0) {
+          // Immediately display cached number for zero latency UI
+          trustedCountEl.textContent = `${cachedCount.toLocaleString()}+ Users`;
+          currentDisplayCount = cachedCount;
+        } else {
+          trustedCountEl.textContent = "0+ Users";
+        }
       }
-    }).catch(() => {});
+    }
+
+    function animateCount(target, startFrom = 0) {
+      if (!trustedCountEl || target <= startFrom) return;
+      const duration = 2000; // 2 seconds animation
+      const startTime = performance.now();
+      const diff = target - startFrom;
+      
+      function update(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        // easeOutExpo for a fast start and slow, smooth finish
+        const easeOut = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+        const currentCount = Math.floor(startFrom + (diff * easeOut));
+        
+        trustedCountEl.textContent = `${currentCount.toLocaleString()}+ Users`;
+        
+        if (progress < 1) {
+          requestAnimationFrame(update);
+        } else {
+          trustedCountEl.textContent = `${target.toLocaleString()}+ Users`;
+          currentDisplayCount = target;
+        }
+      }
+      requestAnimationFrame(update);
+    }
+
+    // Direct CDN-like Frontend Fetch for maximum speed
+    const trackingUrl = "https://script.google.com/macros/s/AKfycbyrao1GQrhzYsO9PE3yzdzgj7T3QbaiT8V06fELWqGFWkIqEqwwqKTbgIT3khlmP0n0/exec?type=count";
+    
+    fetch(trackingUrl, { cache: "no-store" })
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.total > currentDisplayCount) {
+          // Update cache and animate up from the current display count
+          localStorage.setItem("xcore_user_count", data.total.toString());
+          animateCount(data.total, currentDisplayCount);
+        }
+      })
+      .catch(() => {
+        // Fallback to IPC if direct frontend fetch is blocked by CORS/network
+        window.api.getCounts().then(r => {
+          if (r && r.ok && r.total > currentDisplayCount) {
+            localStorage.setItem("xcore_user_count", r.total.toString());
+            animateCount(r.total, currentDisplayCount);
+          }
+        }).catch(() => {});
+      });
 
     setStatus("Idle.");
     setOptStatus("Idle");
