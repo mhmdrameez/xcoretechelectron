@@ -32,6 +32,16 @@
   const optStatusEl        = el("optStatus");
   const trustedCountEl     = el("trustedCount");
   const trustedBadgeEl     = el("trustedBadge");
+  const goProBtn           = el("goProBtn");
+  const activateModal      = el("activateModal");
+  const closeActivateBtn   = el("closeActivateBtn");
+  const activateBtn        = el("activateBtn");
+  const licenseKeyInput    = el("licenseKeyInput");
+  const licenseErrorEl     = el("licenseError");
+  const proBadge           = el("proBadge");
+  const autoStartContainer = el("autoStartContainer");
+  const startupOverlay     = el("startupOverlay");
+  const startupLockTag     = el("startupLockTag");
 
   // ── constants ──────────────────────────────────────────────────────────────
   const MAX_LIST_ROWS = 2000;
@@ -133,6 +143,24 @@
     if (sysRamEl)    sysRamEl.textContent    = s.ram    ? `${s.ram} GB` : "-";
     if (sysFreeEl)   sysFreeEl.textContent   = s.free   ? `${s.free} GB` : "-";
   }
+
+  function applyProState(isPro) {
+    if (isPro) {
+      if (proBadge) { proBadge.textContent = "PRO"; proBadge.className = "proBadge pro"; }
+      if (goProBtn) goProBtn.style.display = "none";
+      if (autoStartContainer) autoStartContainer.classList.remove("proLockedFeature");
+      if (startupOverlay) startupOverlay.classList.add("hidden");
+      if (startupLockTag) startupLockTag.style.display = "none";
+      if (autoStartChk) autoStartChk.disabled = false;
+    } else {
+      if (proBadge) { proBadge.textContent = "FREE"; proBadge.className = "proBadge free"; }
+      if (goProBtn) goProBtn.style.display = "flex";
+      if (autoStartContainer) autoStartContainer.classList.add("proLockedFeature");
+      if (startupOverlay) startupOverlay.classList.remove("hidden");
+      if (startupLockTag) startupLockTag.style.display = "inline-block";
+      if (autoStartChk) autoStartChk.disabled = true;
+    }
+  }
   function updateImpactCards(s) {
     if (!s) return;
     if (impactTotalCleanedEl) impactTotalCleanedEl.textContent = formatBytes(s.totalBytesFreed || 0);
@@ -202,6 +230,11 @@
     // Always show dashboard
     showFirstRun(false);
     
+    // Check License
+    window.api.getLicense().then(r => {
+      if (r && r.ok) applyProState(r.license.isPro);
+    }).catch(() => {});
+
     window.api.getSystemInfo().then(r => { 
       if (r && r.ok) {
         updateSystemDashboard(r.system); 
@@ -262,6 +295,11 @@
 
 
   autoStartChk.addEventListener("change", async () => {
+    if (autoStartContainer.classList.contains("proLockedFeature")) {
+      autoStartChk.checked = !autoStartChk.checked;
+      toggleActivateModal(true);
+      return;
+    }
     const desired = !!autoStartChk.checked;
     setStatus("Updating startup setting…");
     try {
@@ -508,6 +546,51 @@
       loadStartupPrograms();
     });
   }
+
+  if (goProBtn) goProBtn.addEventListener("click", () => toggleActivateModal(true));
+  if (closeActivateBtn) closeActivateBtn.addEventListener("click", () => toggleActivateModal(false));
+  if (activateModal) activateModal.addEventListener("click", (e) => { if (e.target === activateModal) toggleActivateModal(false); });
+
+  function toggleActivateModal(show) {
+    if (activateModal) activateModal.classList.toggle("visible", !!show);
+    if (show && licenseKeyInput) {
+      licenseKeyInput.value = "";
+      if (licenseErrorEl) licenseErrorEl.textContent = "";
+      licenseKeyInput.focus();
+    }
+  }
+
+  if (activateBtn) activateBtn.addEventListener("click", async () => {
+    const key = String(licenseKeyInput ? licenseKeyInput.value : "").trim();
+    if (!key) {
+      if (licenseErrorEl) licenseErrorEl.textContent = "Please enter a license key.";
+      return;
+    }
+
+    activateBtn.disabled = true;
+    if (licenseErrorEl) licenseErrorEl.textContent = "Verifying securely...";
+
+    try {
+      const r = await window.api.verifyLicense(key);
+      if (r && r.ok) {
+        applyProState(true);
+        if (licenseErrorEl) {
+          licenseErrorEl.style.color = "var(--accent-primary)";
+          licenseErrorEl.textContent = r.msg;
+        }
+        setTimeout(() => toggleActivateModal(false), 1500);
+      } else {
+        if (licenseErrorEl) {
+          licenseErrorEl.style.color = "var(--accent-danger)";
+          licenseErrorEl.textContent = r && r.error ? r.error : "Verification failed.";
+        }
+      }
+    } catch (err) {
+      if (licenseErrorEl) licenseErrorEl.textContent = "Connection error during verification.";
+    } finally {
+      activateBtn.disabled = false;
+    }
+  });
 
   // ── init ───────────────────────────────────────────────────────────────────
   function init() {

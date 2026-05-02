@@ -22,6 +22,8 @@ contextBridge.exposeInMainWorld("api", {
   setAutoStart:       (en)          => ipcRenderer.invoke("autostart:set", !!en),
   getStats:           ()            => ipcRenderer.invoke("stats:get"),
   getSystemInfo:      ()            => ipcRenderer.invoke("system:get"),
+  getLicense:         ()            => ipcRenderer.invoke("license:get"),
+  verifyLicense:      (k)           => ipcRenderer.invoke("license:verify", k),
   getCounts:          ()            => ipcRenderer.invoke("analytics:getCounts"),
   trackEvent:         (p)           => ipcRenderer.invoke("analytics:track", p || {}),
 

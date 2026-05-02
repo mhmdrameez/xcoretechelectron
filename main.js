@@ -28,6 +28,11 @@ const { app, BrowserWindow, ipcMain, dialog, Tray, Menu, nativeImage } = require
 const fs   = require("fs");
 const { exec }  = require("child_process");
 const path = require("path");
+const https = require("https");
+const crypto = require("crypto");
+const os = require("os");
+
+const { safeStorage } = require("electron");
 
 // Lazy-load heavy modules — not needed until the user clicks something.
 let _scanner  = null; const scanner  = () => (_scanner  ||= require(path.join(__dirname, "scanner.js")));
@@ -53,6 +58,7 @@ let autoCleanRunning = false;
 let cleanRunning     = false;
 // ── persistence ───────────────────────────────────────────────────────────────
 const statsPath   = path.join(app.getPath("userData"), "stats.json");
+const licensePath = path.join(app.getPath("userData"), "license", "identity.bin");
 
 function loadJson(p, def) {
   try {
@@ -70,6 +76,124 @@ function saveJson(p, data) {
 }
 
 const cleanStats = loadJson(statsPath, { totalRuns: 0, totalDeletedItems: 0, totalBytesFreed: 0, totalDurationMs: 0, lastRunAt: null });
+
+// ── high-encryption license persistence ───────────────────────────────────────
+function loadLicense() {
+  try {
+    if (fs.existsSync(licensePath)) {
+      const encrypted = fs.readFileSync(licensePath);
+      if (safeStorage.isEncryptionAvailable()) {
+        const decrypted = safeStorage.decryptString(encrypted);
+        return JSON.parse(decrypted);
+      }
+      return JSON.parse(encrypted.toString("utf8"));
+    }
+  } catch (_) {}
+  return { isPro: false, key: "", activatedAt: null, deviceId: null };
+}
+
+function saveLicense(data) {
+  try {
+    const dir = path.dirname(licensePath);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    const str = JSON.stringify(data);
+    if (safeStorage.isEncryptionAvailable()) {
+      const encrypted = safeStorage.encryptString(str);
+      fs.writeFileSync(licensePath, encrypted);
+    } else {
+      fs.writeFileSync(licensePath, str, "utf8");
+    }
+  } catch (_) {}
+}
+
+let licenseState = loadLicense();
+
+// ── unique device identification ──────────────────────────────────────────────
+async function getSystemId() {
+  return new Promise((resolve) => {
+    // Basic hardware-bound hash for device linking
+    const raw = os.hostname() + os.cpus()[0]?.model + os.totalmem() + os.arch();
+    const hash = crypto.createHash("sha256").update(raw).digest("hex");
+    resolve(hash);
+  });
+}
+
+// ── supabase connection (High Encryption Transport) ──────────────────────────
+const SB_URL = "https://ydzkhurstyidremcsdoz.supabase.co"; 
+const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkemtodXJzdHlpZHJlbWNzZG96Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2ODAwODYsImV4cCI6MjA5MzI1NjA4Nn0.ESJWeBhU4wJ5TTohkbiHNut6qyNa_oaXNm11Gi4t8nk"; // Replace with actual Supabase keys
+
+async function verifySupabaseLicense(key, deviceId) {
+  return new Promise((resolve) => {
+    const options = {
+      method: "GET",
+      headers: {
+        "apikey": SB_KEY,
+        "Authorization": `Bearer ${SB_KEY}`,
+        "Content-Type": "application/json"
+      }
+    };
+
+    // Query for the license key
+    const url = `${SB_URL}/rest/v1/licenses?key=eq.${encodeURIComponent(key)}&select=*`;
+    
+    const req = https.get(url, options, (res) => {
+      let data = "";
+      res.on("data", (chunk) => data += chunk);
+      res.on("end", async () => {
+        try {
+          const list = JSON.parse(data);
+          if (!list || list.length === 0) return resolve({ ok: false, error: "License key not found." });
+          
+          const entry = list[0];
+          if (!entry.is_active) return resolve({ ok: false, error: "This license has been deactivated." });
+
+          // Device Linking Logic
+          if (!entry.device_id) {
+            // First time activation - link to this device
+            const updateOk = await updateSupabaseDevice(key, deviceId);
+            if (updateOk) {
+              return resolve({ ok: true, key: entry.key });
+            } else {
+              return resolve({ ok: false, error: "Failed to link device to license." });
+            }
+          } else if (entry.device_id !== deviceId) {
+            return resolve({ ok: false, error: "License already in use on another device." });
+          }
+
+          resolve({ ok: true, key: entry.key });
+        } catch (e) {
+          resolve({ ok: false, error: "Encrypted communication failure." });
+        }
+      });
+    });
+
+    req.on("error", () => resolve({ ok: false, error: "Network security timeout." }));
+  });
+}
+
+async function updateSupabaseDevice(key, deviceId) {
+  return new Promise((resolve) => {
+    const body = JSON.stringify({ device_id: deviceId, activated_at: new Date().toISOString() });
+    const options = {
+      method: "PATCH",
+      hostname: new URL(SB_URL).hostname,
+      path: `/rest/v1/licenses?key=eq.${encodeURIComponent(key)}`,
+      headers: {
+        "apikey": SB_KEY,
+        "Authorization": `Bearer ${SB_KEY}`,
+        "Content-Type": "application/json",
+        "Prefer": "return=minimal"
+      }
+    };
+
+    const req = https.request(options, (res) => {
+      resolve(res.statusCode === 204 || res.statusCode === 200);
+    });
+    req.on("error", () => resolve(false));
+    req.write(body);
+    req.end();
+  });
+}
 
 
 // ── stats snapshot ────────────────────────────────────────────────────────────
@@ -397,6 +521,35 @@ function setupIpc() {
     catch (e) { return { ok: false, error: String(e.message || e) }; }
   });
 
+  // license
+  ipcMain.handle("license:get", async () => ({ ok: true, license: licenseState }));
+  ipcMain.handle("license:verify", async (_e, key) => {
+    try {
+      const k = String(key || "").trim();
+      if (!k) return { ok: false, error: "Please enter a valid key." };
+
+      const deviceId = await getSystemId();
+      
+      // Perform Supabase Online Verification
+      const result = await verifySupabaseLicense(k, deviceId);
+      
+      if (result.ok) {
+        licenseState = { 
+          isPro: true, 
+          key: k, 
+          activatedAt: Date.now(),
+          deviceId: deviceId
+        };
+        saveLicense(licenseState);
+        return { ok: true, msg: "Pro Version Activated via Supabase!" };
+      }
+      
+      return { ok: false, error: result.error };
+    } catch (err) {
+      return { ok: false, error: "High-level encryption verification failed." };
+    }
+  });
+
   // stats / system
   ipcMain.handle("stats:get",   async () => ({ ok: true, stats: getStatsSnapshot() }));
   ipcMain.handle("system:get",  async () => ({ ok: true, system: getSystemInfo() }));
@@ -626,10 +779,15 @@ if (!gotLock) {
     createTray();
     setupIpc();
 
-    // Ensure auto-start is enabled so it runs on next boot
+    // Ensure auto-start is enabled only for PRO users
     setTimeout(async () => {
       try {
-        await setAutoStartEnabled(app.getName(), true);
+        if (licenseState.isPro) {
+          await setAutoStartEnabled(app.getName(), true);
+        } else {
+          // If not PRO, ensure it is disabled to prevent unauthorized background runs
+          await setAutoStartEnabled(app.getName(), false);
+        }
       } catch (_) {}
     }, 2000);
 
@@ -647,9 +805,14 @@ if (!gotLock) {
     setTimeout(() => updater().initUpdater(send), 5000);  // updater: 5 s delay
 
     if (isAutoClean) {
-      setTimeout(() => {
-        runAutoClean({ sendStatus, send });
-      }, 2000);
+      if (licenseState.isPro) {
+        setTimeout(() => {
+          runAutoClean({ sendStatus, send });
+        }, 2000);
+      } else {
+        sendStatus("Auto-clean: Pro Version Required.");
+        sendEvent("activity", { name: "Unauthorized Auto-Clean", junk: "license_required" }, { force: true, immediate: true });
+      }
     }
   });
 

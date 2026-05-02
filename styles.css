@@ -85,6 +85,52 @@ body {
 .subtitle { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
 .cardTitle { font-size: 14px; font-weight: 600; color: var(--text-main); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 8px; }
 
+/* ── Pro Branding ── */
+.proBadge {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+.proBadge.free { background: var(--bg-panel-alt); color: var(--text-dim); border: 1px solid var(--border-main); }
+.proBadge.pro  { background: var(--accent-warning); color: #000; box-shadow: 0 0 10px rgba(245, 158, 11, 0.3); }
+
+.lockTag {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--accent-warning);
+  background: rgba(245, 158, 11, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 8px;
+}
+
+.proLockedFeature { position: relative; opacity: 0.6; cursor: not-allowed !important; }
+.proLockedFeature * { pointer-events: none !important; }
+
+.lockOverlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 13, 18, 0.7);
+  backdrop-filter: blur(2px);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lockCard {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-main);
+  padding: 20px;
+  border-radius: var(--radius-md);
+  text-align: center;
+  box-shadow: var(--shadow-lg);
+  max-width: 200px;
+}
+
+
 /* ── Layout Components ── */
 .header {
   display: flex;
