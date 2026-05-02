@@ -142,14 +142,17 @@ async function verifySupabaseLicense(key, deviceId) {
       res.on("end", async () => {
         try {
           const list = JSON.parse(data);
-          if (!list || list.length === 0) return resolve({ ok: false, error: "License key not found." });
+          
+          if (!list || list.length === 0) {
+            // If the key is visibly in the DB but returns empty, RLS is blocking it.
+            return resolve({ ok: false, error: "License key not found." });
+          }
           
           const entry = list[0];
-          if (!entry.is_active) return resolve({ ok: false, error: "This license has been deactivated." });
 
           // Device Linking Logic
-          if (!entry.device_id) {
-            // First time activation - link to this device
+          if (!entry.used || !entry.device_id) {
+            // First time activation - link to this device and mark as used
             const updateOk = await updateSupabaseDevice(key, deviceId);
             if (updateOk) {
               return resolve({ ok: true, key: entry.key });
@@ -173,7 +176,7 @@ async function verifySupabaseLicense(key, deviceId) {
 
 async function updateSupabaseDevice(key, deviceId) {
   return new Promise((resolve) => {
-    const body = JSON.stringify({ device_id: deviceId, activated_at: new Date().toISOString() });
+    const body = JSON.stringify({ device_id: deviceId, used: true });
     const options = {
       method: "PATCH",
       hostname: new URL(SB_URL).hostname,

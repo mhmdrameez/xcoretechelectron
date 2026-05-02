@@ -21,8 +21,9 @@
 - **🛡️ No Administrator Required** — Runs entirely at the user level (`asInvoker`). No UAC prompts required.
 - **📍 Persistent System Tray** — Minimizes to the system tray for constant availability.
 - **📊 Real-time Analytics** — Granular event tracking logged to Google Sheets and Supabase for impact monitoring.
+- **🚀 CDN-Like Live User Count** — Direct, zero-latency frontend fetch seamlessly animates 100% authentic active user numbers on the dashboard.
 - **🔐 High Encryption Storage** — License data is encrypted via Electron `safeStorage` and obfuscated in a binary identity file.
-- **🔄 Silent Auto-Updates** — Background update delivery via GitHub Releases.
+- **🔄 Automated Build Pipeline** — Pre-distribution hooks automatically increment version numbers and dynamically generate customized `release-notes.md` for GitHub.
 
 ---
 
@@ -73,11 +74,14 @@ const SB_KEY = "your-anon-key";
 ```
 
 ### Database Schema
-Create a `licenses` table in Supabase with the following structure:
-- `key` (Text, PK)
-- `is_active` (Boolean, Default: True)
+Create a `licenses` table in Supabase with the exact following structure:
+- `id` (UUID, PK)
+- `key` (Text)
+- `used` (Boolean, Default: False)
 - `device_id` (Text, Nullable)
-- `activated_at` (Timestamp, Nullable)
+- `created_at` (Timestampz, Default: now())
+
+> **Security Note:** Ensure Row Level Security (RLS) is either disabled for the `licenses` table, or that proper `SELECT` and `UPDATE` policies are added for the `anon` role, otherwise the application will return a "License key not found" error during activation.
 
 ---
 
