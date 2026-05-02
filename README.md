@@ -33,6 +33,7 @@
 xcoretechelectron/
 ├── index.js          # Entry point
 ├── main.js           # Electron main process — Licensing (Supabase), Lifecycle, IPC
+├── config.js         # Git-ignored XOR obfuscated credential store
 ├── preload.js        # Secure context bridge
 ├── renderer.js       # UI logic — Stateless Vanilla JS rendering
 ├── scanner.js        # Parallel directory walker
@@ -65,12 +66,14 @@ XCoreTech PC Optimizer uses a **high-security online activation system** powered
 
 ## ⚙️ Configuration
 
-### Supabase Integration
-Update the credentials in `main.js` to point to your project:
+### Supabase Integration (High Security)
+To protect your database credentials, API keys are XOR-obfuscated and isolated in a dedicated `config.js` file which is strictly ignored by Git (`.gitignore`) to prevent accidental leaks.
 
+If you need to rotate your keys, update the encoded strings in `config.js`:
 ```js
-const SB_URL = "https://your-project.supabase.co"; 
-const SB_KEY = "your-anon-key";
+// config.js is automatically packed by electron-builder, but hidden from GitHub
+const SB_URL = _d("..."); // XOR Encoded Supabase URL
+const SB_KEY = _d("..."); // XOR Encoded Publishable Key
 ```
 
 ### Database Schema
@@ -82,6 +85,23 @@ Create a `licenses` table in Supabase with the exact following structure:
 - `created_at` (Timestampz, Default: now())
 
 > **Security Note:** Ensure Row Level Security (RLS) is either disabled for the `licenses` table, or that proper `SELECT` and `UPDATE` policies are added for the `anon` role, otherwise the application will return a "License key not found" error during activation.
+
+---
+
+## 📦 Automated Publishing & Updates
+
+XCoreTech PC Optimizer features a completely automated build and update pipeline integrated directly with GitHub Releases.
+
+### Pushing an Auto-Update to Users
+When you are ready to ship a new version to your users:
+1. Ensure your GitHub Personal Access Token is active.
+2. In your terminal, set the token:
+   - **Windows (PowerShell):** `$env:GH_TOKEN="your_token_here"`
+3. Run the automated release script:
+   ```bash
+   npm run release
+   ```
+This command will automatically bump the semantic version, generate detailed release notes, compile the installer, and publish the package to GitHub. Installed applications will silently detect the update in the background and prompt the user to apply it upon the next restart.
 
 ---
 
