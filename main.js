@@ -119,8 +119,7 @@ async function getSystemId() {
 }
 
 // ── supabase connection (High Encryption Transport) ──────────────────────────
-const SB_URL = "https://ydzkhurstyidremcsdoz.supabase.co"; 
-const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkemtodXJzdHlpZHJlbWNzZG96Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2ODAwODYsImV4cCI6MjA5MzI1NjA4Nn0.ESJWeBhU4wJ5TTohkbiHNut6qyNa_oaXNm11Gi4t8nk"; // Replace with actual Supabase keys
+const { SB_URL, SB_KEY } = require(path.join(__dirname, "config.js"));
 
 async function verifySupabaseLicense(key, deviceId) {
   return new Promise((resolve) => {

@@ -25,6 +25,7 @@ yarn-error.log*
 .env
 .env.local
 .env.*
+config.js
 
 # ── OS generated files ────────────────────────────────────────────────────────
 .DS_Store
