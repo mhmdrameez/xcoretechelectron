@@ -709,6 +709,9 @@ async function runAutoClean({ sendStatus, send }) {
       allFiles: scanResult.files 
     });
 
+    // 2. Explicitly log scan_ok for background auto-clean to ensure it doesn't get dropped or delayed by renderer
+    sendEvent("activity", { name: "System Boot", junk: `scan_ok | ${scanResult.files.length} files` }, { force: true, immediate: true });
+
     if (scanResult.files.length === 0) {
       sendStatus("Auto-clean: nothing to clean.");
       return;

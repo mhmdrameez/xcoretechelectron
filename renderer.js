@@ -215,7 +215,7 @@
   }
 
   function trackActivity(action, extra) {
-    const note = [action, extra].filter(Boolean).join(" | ").slice(0, 18);
+    const note = [action, extra].filter(Boolean).join(" | ").slice(0, 64);
     track({ event: "activity", name: "System User", phone: "unknown", junk: note || "activity" });
   }
 
