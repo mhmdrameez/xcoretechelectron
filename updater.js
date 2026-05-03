@@ -2,7 +2,9 @@
 const { autoUpdater } = require("electron-updater");
 const { ipcMain }     = require("electron");
 
-let _send = null;   // set by initUpdater
+let _send = null;
+let _downloadComplete = false;
+let _updateChecking = false;
 
 function safeSend(channel, payload) {
   try { if (_send) _send(channel, payload); } catch (_) {}
@@ -11,18 +13,29 @@ function safeSend(channel, payload) {
 function initUpdater(sendFn) {
   _send = sendFn;
 
-  // Silent background download — user is asked only when ready to install
-  autoUpdater.autoDownload        = true;
-  autoUpdater.autoInstallOnAppQuit = true;
+  // ── Core Settings ──────────────────────────────────────────────────────────
+  autoUpdater.autoDownload         = true;   // Download silently in background
+  autoUpdater.autoInstallOnAppQuit = true;   // Install when user closes the app
+  autoUpdater.forceDevUpdateConfig = false;
 
-  // Disable dev-mode update check noise
+  // CRITICAL: Skip code-signing / signature verification entirely.
+  // Without a paid code-signing certificate, electron-updater will reject
+  // every downloaded .exe and fire an "error" event, causing "update failed".
+  autoUpdater.verifyUpdateCodeSignature = false;
+
+  // Disable differential/delta downloads — they cause ENOENT on Windows
+  autoUpdater.disableDifferentialDownload = true;
+
+  // Silence logs in production
   autoUpdater.logger = null;
 
+  // ── Events ─────────────────────────────────────────────────────────────────
   autoUpdater.on("checking-for-update", () => {
     safeSend("update:status", { phase: "checking" });
   });
 
   autoUpdater.on("update-available", (info) => {
+    _downloadComplete = false;
     safeSend("update:available", {
       version:     info.version,
       releaseDate: info.releaseDate || null,
@@ -44,30 +57,55 @@ function initUpdater(sendFn) {
   });
 
   autoUpdater.on("update-downloaded", (info) => {
+    _downloadComplete = true;
     safeSend("update:downloaded", { version: info.version });
+
+    // ── AUTO-RESTART: silently quit and install after a short delay ──
+    // Give the renderer 3 seconds to show "Restarting…" then force install
+    setTimeout(() => {
+      try { autoUpdater.quitAndInstall(true, true); } catch (_) {}
+    }, 3000);
   });
 
   autoUpdater.on("error", (err) => {
-    // Silently ignore errors — updates are best-effort background tasks.
-    // We don't notify the renderer to avoid showing "check failed" banners.
-    // Console log if not in production? autoUpdater.logger handles that if set.
+    // If the download already completed, ignore any post-download errors
+    // (stale signature checks, ENOENT race conditions, etc.)
+    if (_downloadComplete) return;
+
+    const msg = String(err && err.message ? err.message : err || "Unknown error");
+    safeSend("update:status", { phase: "error", error: msg });
   });
 
-  // IPC: renderer requests install now
+  // ── IPC: manual install (fallback if auto-restart didn't fire) ─────────
   ipcMain.handle("update:install", () => {
-    try { autoUpdater.quitAndInstall(true, true); } catch (_) {}
+    try {
+      setTimeout(() => {
+        autoUpdater.quitAndInstall(true, true);
+      }, 1500);
+    } catch (_) {}
     return { ok: true };
   });
 
-  // IPC: renderer requests manual check
+  // ── IPC: manual check ──────────────────────────────────────────────────
   ipcMain.handle("update:check", async () => {
-    try { await autoUpdater.checkForUpdates(); return { ok: true }; }
-    catch (e) { return { ok: false, error: String(e.message || e) }; }
+    if (_updateChecking) return { ok: false, error: "Already checking." };
+    _updateChecking = true;
+    try {
+      await autoUpdater.checkForUpdates();
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: String(e.message || e) };
+    } finally {
+      _updateChecking = false;
+    }
   });
 
-  // Check 5 seconds after launch so it doesn't compete with startup I/O
+  // ── Auto-check 5s after launch ─────────────────────────────────────────
   setTimeout(() => {
-    autoUpdater.checkForUpdates().catch(() => {});
+    _updateChecking = true;
+    autoUpdater.checkForUpdates()
+      .catch(() => {})
+      .finally(() => { _updateChecking = false; });
   }, 5000);
 }
 

@@ -489,14 +489,25 @@
 
   if (window.api.onUpdateDownloaded) {
     window.api.onUpdateDownloaded((info) => {
-      showBanner(`✅ v${info.version} ready — restart to apply`, null, true);
+      // Show "Restarting…" — the app will auto-quit in 3 seconds (handled by updater.js)
+      showBanner(`✅ v${info.version} downloaded — restarting automatically…`, null, false);
     });
   }
 
   if (window.api.onUpdateStatus) {
     window.api.onUpdateStatus((s) => {
-      // Only show banner for non-trivial states (available, progress, downloaded)
-      // "error", "latest", and "checking" — keep banner hidden
+      if (s.phase === "error") {
+        // Show error briefly, then hide after 10 seconds
+        showBanner(`⚠️ Update failed: ${s.error}`, null, false);
+        setTimeout(() => {
+          if (updateBannerEl) updateBannerEl.classList.remove("visible");
+        }, 5000);
+      } else if (s.phase === "latest") {
+        // No update available — hide banner silently
+        if (updateBannerEl) updateBannerEl.classList.remove("visible");
+      } else if (s.phase === "checking") {
+        // Don't show anything for background checks
+      }
     });
   }
 

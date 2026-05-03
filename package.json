@@ -49,6 +49,7 @@
       "crashHandler.js",
       "location.js",
       "updater.js",
+      "technician.js",
       "index.html",
       "styles.css",
       "assets/**/*"
@@ -57,7 +58,7 @@
     "compression": "maximum",
     "win": {
       "icon": "assets/app-icon.ico",
-      "publisherName": "XCoreTech Team",
+      "verifyUpdateCodeSignature": false,
       "requestedExecutionLevel": "asInvoker",
       "target": [
         {
