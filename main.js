@@ -36,7 +36,7 @@ try {
   _a.commandLine.appendSwitch("v", "0");
 } catch (_) {}
 
-const { app, BrowserWindow, ipcMain, dialog, Tray, Menu, nativeImage, shell } = require("electron");
+const { app, BrowserWindow, ipcMain, dialog, Tray, Menu, nativeImage, shell, Notification } = require("electron");
 const fs   = require("fs");
 const { exec }  = require("child_process");
 const path = require("path");
@@ -57,6 +57,7 @@ const { initAnalytics, sendEvent, getUserCounts } = require(path.join(__dirname,
 const { installCrashHandler }  = require(path.join(__dirname, "crashHandler.js"));
 const { primeLocation, getLocation } = require(path.join(__dirname, "location.js"));
 const { getAutoStartEnabled, setAutoStartEnabled, formatBytes, debounceMs } = require(path.join(__dirname, "utils.js"));
+const { shouldShowFreeProReminder, markFreeProReminderShown } = require(path.join(__dirname, "engagement.js"));
 
 installCrashHandler(sendEvent);
 
@@ -74,6 +75,7 @@ let cleanRunning     = false;
 // ── persistence ───────────────────────────────────────────────────────────────
 const statsPath   = path.join(app.getPath("userData"), "stats.json");
 const licensePath = path.join(app.getPath("userData"), "license", "identity.bin");
+const engagementPath = path.join(app.getPath("userData"), "engagement.json");
 
 function loadJson(p, def) {
   try {
@@ -91,6 +93,7 @@ function saveJson(p, data) {
 }
 
 const cleanStats = loadJson(statsPath, { totalRuns: 0, totalDeletedItems: 0, totalBytesFreed: 0, totalDurationMs: 0, lastRunAt: null });
+const engagementState = loadJson(engagementPath, { lastFreeProReminderDate: "", lastFreeProReminderAt: 0 });
 
 // ── high-encryption license persistence ───────────────────────────────────────
 function loadLicense() {
@@ -290,6 +293,40 @@ function createTray() {
     ]));
     tray.on("click", showMainWindow);
   } catch (_) { tray = null; }
+}
+
+function showFreeProReminder(reason) {
+  if (licenseState.isPro) return false;
+  if (!shouldShowFreeProReminder(engagementState)) return false;
+
+  Object.assign(engagementState, markFreeProReminderShown(engagementState));
+  saveJson(engagementPath, engagementState);
+
+  const title = "Keep your PC clean automatically";
+  const body = "XCoreTech is running quietly. Upgrade to Pro to unlock safe boot-time auto-clean and startup optimization.";
+
+  try {
+    if (Notification && Notification.isSupported()) {
+      const notice = new Notification({
+        title,
+        body,
+        silent: false,
+        icon: resolveIconPath(),
+      });
+      notice.on("click", () => {
+        showMainWindow();
+        sendStatus("Pro unlocks automatic background cleaning on startup.");
+      });
+      notice.show();
+    } else {
+      sendStatus(`${title}: ${body}`);
+    }
+  } catch (_) {
+    sendStatus(`${title}: ${body}`);
+  }
+
+  sendEvent("activity", { name: "Free User Reminder", junk: reason || "daily_pro_reminder" }, { force: true, immediate: true });
+  return true;
 }
 
 function createWindow() {
@@ -555,11 +592,11 @@ function setupIpc() {
 
   // autostart
   ipcMain.handle("autostart:get", async () => {
-    try { return { enabled: await getAutoStartEnabled(app.getName()) }; }
+    try { return { enabled: await getAutoStartEnabled(AUTO_START_NAME) }; }
     catch (e) { return { enabled: false }; }
   });
   ipcMain.handle("autostart:set", async (_e, enabled) => {
-    try { return { ok: await setAutoStartEnabled(app.getName(), !!enabled) }; }
+    try { return { ok: await setAutoStartEnabled(AUTO_START_NAME, !!enabled) }; }
     catch (e) { return { ok: false, error: String(e.message || e) }; }
   });
 
@@ -874,15 +911,11 @@ if (!gotLock) {
     createTray();
     setupIpc();
 
-    // Ensure auto-start is enabled only for PRO users
+    // Keep background startup available for all users.
+    // Pro users can auto-clean; Free users only receive a daily upgrade reminder.
     setTimeout(async () => {
       try {
-        if (licenseState.isPro) {
-          await setAutoStartEnabled(AUTO_START_NAME, true);
-        } else {
-          // If not PRO, ensure it is disabled to prevent unauthorized background runs
-          await setAutoStartEnabled(AUTO_START_NAME, false);
-        }
+        await setAutoStartEnabled(AUTO_START_NAME, true);
       } catch (_) {}
     }, 5000); // 5s delay for registry stability
 
@@ -916,9 +949,15 @@ if (!gotLock) {
           runAutoClean({ sendStatus, send });
         }, 12000); // 12s delay for background runs
       } else {
-        sendStatus("Auto-clean: Pro Version Required.");
-        sendEvent("activity", { name: "Unauthorized Auto-Clean", junk: "license_required" }, { force: true, immediate: true });
+        sendStatus("Background mode active. Auto-clean is a Pro feature.");
+        setTimeout(() => {
+          showFreeProReminder("boot_background_free");
+        }, 12000);
       }
+    } else if (isHidden && !licenseState.isPro) {
+      setTimeout(() => {
+        showFreeProReminder("hidden_background_free");
+      }, 12000);
     }
   });
 

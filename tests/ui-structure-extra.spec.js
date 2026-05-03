@@ -1,5 +1,6 @@
 const { test, expect } = require('@playwright/test');
 const { launchApp, closeApp } = require('./helpers/electronApp');
+const packageJson = require('../package.json');
 
 test.describe('UI Structure Extra Coverage', () => {
   let electronApp;
@@ -56,7 +57,7 @@ test.describe('UI Structure Extra Coverage', () => {
 
   test('footer support and version information is visible', async () => {
     await expect(window.locator('.footer')).toContainText('Support: +91 7907858474');
-    await expect(window.locator('.footer')).toContainText('Version 1.3.6');
+    await expect(window.locator('.footer')).toContainText(`Version ${packageJson.version}`);
   });
 
   test('busy overlay is hidden while idle', async () => {

@@ -24,6 +24,7 @@ test.describe('Static App Contracts', () => {
       'renderer.js',
       'preload.js',
       'main.js',
+      'engagement.js',
     ]));
   });
 
@@ -68,6 +69,21 @@ test.describe('Static App Contracts', () => {
     expect(css).toContain('.paymentModal');
     expect(css).toContain('.paymentCard');
     expect(css).toContain('@media (max-width: 520px)');
+  });
+
+  test('free boot background mode shows a daily Pro reminder instead of auto-cleaning', () => {
+    const main = read('main.js');
+    expect(main).toContain('showFreeProReminder("boot_background_free")');
+    expect(main).toContain('Background mode active. Auto-clean is a Pro feature.');
+    expect(main).toContain('Notification.isSupported');
+    expect(main).toContain('markFreeProReminderShown');
+
+    const freeBranch = main.slice(
+      main.indexOf('sendStatus("Background mode active. Auto-clean is a Pro feature.")'),
+      main.indexOf('} else if (isHidden && !licenseState.isPro)')
+    );
+    expect(freeBranch).not.toContain('runAutoClean');
+    expect(freeBranch).not.toContain('cleaner().cleanFiles');
   });
 
   test('HTML loads only the local renderer script', () => {
