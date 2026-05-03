@@ -131,6 +131,25 @@ This command will automatically bump the semantic version, generate detailed rel
 
 ---
 
+## 🧪 Automated Testing
+
+XCoreTech PC Optimizer utilizes an industry-standard **Playwright** testing suite to ensure all UI features, core performance tasks, and Pro functionalities remain stable without requiring manual testing.
+
+### Running the E2E Test Suite
+To automatically launch the application and test all features (Scan, Clean, System Info, Technician Mode):
+
+```bash
+npm install -D @playwright/test
+npm test
+```
+
+### Test Coverage
+- **Core Features**: Validates parallel scanning engines and safely verifies the cleaning pipeline.
+- **Dashboard Features**: Verifies System Information data retrieval and Windows Auto Start registry toggles.
+- **Technician Mode (PRO)**: Mocks the PRO environment dynamically (`PLAYWRIGHT_TEST=1`) to automatically test the RAM Boost, Auto Fix, and Internet Fix (piping backend CMD operations straight into the test logs).
+
+---
+
 ## 📜 License
 
 **Proprietary License**  
