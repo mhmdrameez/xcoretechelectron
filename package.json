@@ -12,9 +12,11 @@
     "predist": "node pre-dist.js",
     "dist": "electron-builder",
     "prerelease": "node pre-dist.js",
-    "release": "electron-builder --publish always"
+    "release": "electron-builder --publish always",
+    "test": "playwright test"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "electron": "22.3.27",
     "electron-builder": "^24.13.3"
   },

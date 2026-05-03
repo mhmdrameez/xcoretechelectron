@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
@@ -24,9 +25,12 @@
           <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 4px;">
             <div class="appname">XCoreTech PC Optimizer</div>
             <div id="proBadge" class="proBadge free">FREE</div>
-            <div id="trustedBadge" class="trustedBadge" title="Verified users who trust XCoreTech PC Optimizer" style="display:none; align-items: center; gap: 6px; padding: 4px 10px; background: var(--bg-panel-alt); border-radius: 20px; border: 1px solid var(--border-main);">
+            <div id="trustedBadge" class="trustedBadge" title="Verified users who trust XCoreTech PC Optimizer"
+              style="display:none; align-items: center; gap: 6px; padding: 4px 10px; background: var(--bg-panel-alt); border-radius: 20px; border: 1px solid var(--border-main);">
               <span class="tIcon" style="font-size: 13px;">🛡️</span>
-              <span class="tCount" id="trustedCount" style="font-size: 11px; font-weight: 700; color: var(--text-main); letter-spacing: 0.05em;">0+ Users</span>
+              <span class="tCount" id="trustedCount"
+                style="font-size: 11px; font-weight: 700; color: var(--text-main); letter-spacing: 0.05em;">0+
+                Users</span>
             </div>
           </div>
           <div class="subtitle">System Analytics & Advanced Performance Tuning</div>
@@ -53,7 +57,8 @@
           <input id="autoStartChk" type="checkbox" />
           <span>Launch at Windows Startup (Auto-Clean) <span class="lockTag">🔒 PRO</span></span>
         </label>
-        <div class="status" style="margin: 0;">System Status: <span id="statusText" style="color: var(--text-main); font-weight: 600;">Idle</span></div>
+        <div class="status" style="margin: 0;">System Status: <span id="statusText"
+            style="color: var(--text-main); font-weight: 600;">Idle</span></div>
       </div>
 
       <div class="progress" style="margin-top: 20px; width: 100%;">
@@ -112,7 +117,8 @@
     </section>
     <!-- ── Technician Mode (Advanced Pro Tools) ── -->
     <section class="card" id="technicianSection">
-      <div class="cardTitle" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <div class="cardTitle"
+        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
         <div style="display: flex; align-items: center; gap: 10px;">
           <span>🛠️</span> Technician Mode
         </div>
@@ -133,7 +139,8 @@
           <div class="techToolInfo">
             <div class="techToolName">Internet Fix</div>
             <div class="techToolDesc">Flush DNS, reset Winsock & IP stack.</div>
-            <div class="techToolProgress" id="techInternetProg" style="font-size:10px; color:var(--accent-secondary); margin-top:4px; height:12px;"></div>
+            <div class="techToolProgress" id="techInternetProg"
+              style="font-size:10px; color:var(--accent-secondary); margin-top:4px; height:12px;"></div>
           </div>
           <button id="techInternetBtn" class="btn ghostBtn techBtn">Run Fix</button>
         </div>
@@ -143,7 +150,8 @@
           <div class="techToolInfo">
             <div class="techToolName">RAM Boost</div>
             <div class="techToolDesc">Optimizes memory usage for all apps.</div>
-            <div class="techToolProgress" id="techRamProg" style="font-size:10px; color:var(--accent-secondary); margin-top:4px; height:12px;"></div>
+            <div class="techToolProgress" id="techRamProg"
+              style="font-size:10px; color:var(--accent-secondary); margin-top:4px; height:12px;"></div>
           </div>
           <button id="techRamBtn" class="btn ghostBtn techBtn">Optimize</button>
         </div>
@@ -153,7 +161,8 @@
           <div class="techToolInfo">
             <div class="techToolName">Auto Fix</div>
             <div class="techToolDesc">Fix common Windows Update & Spooler issues.</div>
-            <div class="techToolProgress" id="techAutoProg" style="font-size:10px; color:var(--accent-secondary); margin-top:4px; height:12px;"></div>
+            <div class="techToolProgress" id="techAutoProg"
+              style="font-size:10px; color:var(--accent-secondary); margin-top:4px; height:12px;"></div>
           </div>
           <button id="techAutoBtn" class="btn ghostBtn techBtn">Repair</button>
         </div>
@@ -163,7 +172,8 @@
           <div class="techToolInfo">
             <div class="techToolName">FULL SERVICE</div>
             <div class="techToolDesc">Execute all fixes in a single sequence.</div>
-            <div class="techToolProgress" id="techFullProg" style="font-size:10px; color:var(--accent-secondary); margin-top:4px; height:12px;"></div>
+            <div class="techToolProgress" id="techFullProg"
+              style="font-size:10px; color:var(--accent-secondary); margin-top:4px; height:12px;"></div>
           </div>
           <button id="techFullBtn" class="btn primary techBtn">One-Click Fix</button>
         </div>
@@ -172,7 +182,8 @@
 
     <!-- ── Startup Control Center (Always Visible) ── -->
     <section class="card" id="startupSection">
-      <div class="cardTitle" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <div class="cardTitle"
+        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
         <div style="display: flex; align-items: center; gap: 10px;">
           <span>⚡</span> Windows Startup Manifest
         </div>
@@ -183,9 +194,10 @@
           </button>
         </div>
       </div>
-      
+
       <div id="startupBody">
-        <div id="startupList" style="max-height: 320px; overflow-y: auto; border: 1px solid var(--border-main); border-radius: var(--radius-md); background: var(--bg-panel-alt); position: relative;">
+        <div id="startupList"
+          style="max-height: 320px; overflow-y: auto; border: 1px solid var(--border-main); border-radius: var(--radius-md); background: var(--bg-panel-alt); position: relative;">
           <div id="startupOverlay" class="lockOverlay hidden">
             <div class="lockCard">
               <span style="font-size: 24px; margin-bottom: 12px;">🔒</span>
@@ -197,7 +209,9 @@
             Analyzing system boot manifest...
           </div>
         </div>
-        <div id="startupStatusEl" style="margin-top: 12px; font-size: 11px; color: var(--accent-secondary); font-style: italic; min-height: 1.2em;"></div>
+        <div id="startupStatusEl"
+          style="margin-top: 12px; font-size: 11px; color: var(--accent-secondary); font-style: italic; min-height: 1.2em;">
+        </div>
       </div>
     </section>
 
@@ -208,20 +222,26 @@
           <div style="font-size: 32px; margin-bottom: 16px;">🔒</div>
           <div class="modalTitle">Activate Pro Version</div>
         </div>
-        
-        <p id="licenseInfoText" style="font-size: 13px; color: var(--text-muted); line-height: 1.6; margin-bottom: 24px;">
-          🔒 <strong>Activate Pro Version</strong> to unlock automatic cleaning and startup optimization. 
-          Enter your license key below to enable full background maintenance on this device. 
-          Each license is valid for <strong>one device only</strong> and is securely verified online. 
+
+        <p id="licenseInfoText"
+          style="font-size: 13px; color: var(--text-muted); line-height: 1.6; margin-bottom: 24px;">
+          🔒 <strong>Activate Pro Version</strong> to unlock automatic cleaning and startup optimization.
+          Enter your license key below to enable full background maintenance on this device.
+          Each license is valid for <strong>one device only</strong> and is securely verified online.
           Once activated, all Pro features will be immediately unlocked and run silently in the background.
         </p>
 
         <div style="margin-bottom: 20px;">
-          <label style="display: block; font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; margin-bottom: 8px;">License Key</label>
-          <input id="licenseKeyInput" type="text" class="inputField" placeholder="XXXX-XXXX-XXXX-XXXX" style="margin-bottom: 0; text-align: center; letter-spacing: 2px; font-family: monospace; font-weight: 700;" />
-          <div id="licenseError" style="font-size: 11px; color: var(--accent-danger); margin-top: 8px; min-height: 1.2em; text-align: center;"></div>
+          <label
+            style="display: block; font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; margin-bottom: 8px;">License
+            Key</label>
+          <input id="licenseKeyInput" type="text" class="inputField" placeholder="XXXX-XXXX-XXXX-XXXX"
+            style="margin-bottom: 0; text-align: center; letter-spacing: 2px; font-family: monospace; font-weight: 700;" />
+          <div id="licenseError"
+            style="font-size: 11px; color: var(--accent-danger); margin-top: 8px; min-height: 1.2em; text-align: center;">
+          </div>
         </div>
-        
+
         <div style="display: flex; flex-direction: column; gap: 12px;">
           <button id="activateBtn" class="btn primary" style="width: 100%;">Verify & Activate</button>
           <div style="display: flex; gap: 12px;">
@@ -251,7 +271,8 @@
           </div>
         </div>
       </div>
-      <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--text-dim);">
+      <div
+        style="margin-top: 24px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--text-dim);">
         <div>© 2024 XCoreTech Team. All Rights Reserved.</div>
         <div style="display: flex; gap: 16px;">
           <span>Version 1.3.6</span>
@@ -271,4 +292,5 @@
 
   <script src="renderer.js"></script>
 </body>
+
 </html>

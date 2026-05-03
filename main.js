@@ -29,7 +29,9 @@ try {
   _a.commandLine.appendSwitch("disable-dev-shm-usage");
   
   // Disable logging and dev tools for production performance
-  _a.commandLine.appendSwitch("disable-dev-tools");
+  if (!process.env.PLAYWRIGHT_TEST) {
+    _a.commandLine.appendSwitch("disable-dev-tools");
+  }
   _a.commandLine.appendSwitch("disable-logging");
   _a.commandLine.appendSwitch("v", "0");
 } catch (_) {}
@@ -117,6 +119,9 @@ function saveLicense(data) {
 }
 
 let licenseState = loadLicense();
+if (process.env.PLAYWRIGHT_TEST) {
+  licenseState.isPro = true;
+}
 
 // ── unique device identification ──────────────────────────────────────────────
 async function getSystemId() {
@@ -668,12 +673,15 @@ function setupIpc() {
       }
 
       const retryCount = (retry.files || []).length + (retry.directories || []).length;
-      const res = await dialog.showMessageBox(mainWindow, {
-        type: "warning", title: "Confirm Cleaning",
-        message: `Delete ${mergedFiles.length} file(s) (${formatBytes(totalBytes)})${retryCount ? ` + retry ${retryCount} locked item(s)` : ""}?`,
-        detail:  "Only files found during the last scan will be removed. Locked files will be skipped.",
-        buttons: ["Cancel", "Clean"], defaultId: 1, cancelId: 0, noLink: true,
-      });
+      let res = { response: 1 };
+      if (!process.env.PLAYWRIGHT_TEST) {
+        res = await dialog.showMessageBox(mainWindow, {
+          type: "warning", title: "Confirm Cleaning",
+          message: `Delete ${mergedFiles.length} file(s) (${formatBytes(totalBytes)})${retryCount ? ` + retry ${retryCount} locked item(s)` : ""}?`,
+          detail:  "Only files found during the last scan will be removed. Locked files will be skipped.",
+          buttons: ["Cancel", "Clean"], defaultId: 1, cancelId: 0, noLink: true,
+        });
+      }
 
       if (res.response !== 1) { sendStatus("Cleaning cancelled."); return { ok: false, cancelled: true }; }
 
@@ -811,7 +819,7 @@ async function runAutoClean({ sendStatus, send }) {
 
 
 // ── app lifecycle ─────────────────────────────────────────────────────────────
-const gotLock = app.requestSingleInstanceLock();
+const gotLock = process.env.PLAYWRIGHT_TEST ? true : app.requestSingleInstanceLock();
 if (!gotLock) {
   app.quit();
 } else {

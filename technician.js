@@ -36,7 +36,11 @@ async function internetFix(onProgress) {
   const results = [];
   for (const step of commands) {
     if (onProgress) onProgress(step.name);
-    results.push(await execCmd(step.cmd, step.args));
+    const res = await execCmd(step.cmd, step.args);
+    if (process.env.PLAYWRIGHT_TEST || process.env.NODE_ENV === 'test') {
+      console.log(`[CMD: ${step.cmd} ${step.args.join(" ")}]\n${res.stdout || res.stderr || 'No output'}`);
+    }
+    results.push(res);
   }
   // Internet commands (like netsh) may fail without Administrator privileges,
   // or ipconfig /release might fail if media is disconnected. 
