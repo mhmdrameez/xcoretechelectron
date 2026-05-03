@@ -1,296 +1,205 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-
 <head>
-  <meta charset="UTF-8" />
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>XCoreTech PC Optimizer</title>
-  <link rel="stylesheet" href="styles.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>XCoreTech PC Optimizer | ₹399 Lifetime • Direct UPI</title>
+    <!-- Tailwind CSS + Font Awesome + Google Fonts + QR Code Lib -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        body { background: #0a0e17; scroll-behavior: smooth; overflow-x: hidden; }
+        .glass-card { background: rgba(20, 26, 38, 0.7); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.08); }
+        .gradient-text { background: linear-gradient(135deg, #06b6d4, #3b82f6); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .pulse { animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(59,130,246,0.6); } 70% { box-shadow: 0 0 0 12px rgba(59,130,246,0); } 100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); } }
+        .mockup-float { animation: float 5s ease-in-out infinite; }
+        @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-8px); } 100% { transform: translateY(0px); } }
+        .feature-card { transition: all 0.3s ease; }
+        .feature-card:hover { transform: translateY(-6px); background: rgba(30, 38, 56, 0.9); border-color: rgba(59,130,246,0.4); }
+        .step-icon { background: #0a0e17; border: 2px solid #3b82f6; }
+        .modal-bg { background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); }
+        .dialog-enter { animation: fadeInUp 0.3s ease forwards; }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        .whatsapp-btn { background: #25D366; transition: 0.2s; }
+        .whatsapp-btn:hover { background: #128C7E; transform: translateY(-2px); }
+        /* Extra responsive tweaks */
+        @media (max-width: 640px) {
+            .hero-text { font-size: 2rem; line-height: 1.2; }
+            .pricing-card-scale { transform: scale(1) !important; }
+            .modal-inner { max-height: 90vh; overflow-y: auto; }
+            .qr-container canvas, .qr-container img { width: 140px !important; height: 140px !important; }
+        }
+        @media (min-width: 768px) and (max-width: 1024px) {
+            .pricing-card-scale { transform: scale(1.02) !important; }
+        }
+        .overflow-fix { overflow-x: hidden; }
+        .pro-badge { background: rgba(245,158,11,0.2); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); font-size: 0.7rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 20px; display: inline-block; }
+    </style>
 </head>
+<body class="text-white overflow-fix">
 
-<body>
-  <!-- ── Global Notifications ── -->
-  <div id="updateBanner">
-    <span class="uMsg" id="updateMsg">🔄 Checking for updates…</span>
-    <span class="uPct" id="updatePct"></span>
-    <button class="uBtn" id="updateBtn" style="display:none">Restart &amp; Update</button>
-  </div>
-
-  <div id="app">
-    <!-- ── Professional Header ── -->
-    <header class="header">
-      <div class="header-left">
-        <div class="brand">
-          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 4px;">
-            <div class="appname">XCoreTech PC Optimizer</div>
-            <div id="proBadge" class="proBadge free">FREE</div>
-            <div id="trustedBadge" class="trustedBadge" title="Verified users who trust XCoreTech PC Optimizer"
-              style="display:none; align-items: center; gap: 6px; padding: 4px 10px; background: var(--bg-panel-alt); border-radius: 20px; border: 1px solid var(--border-main);">
-              <span class="tIcon" style="font-size: 13px;">🛡️</span>
-              <span class="tCount" id="trustedCount"
-                style="font-size: 11px; font-weight: 700; color: var(--text-main); letter-spacing: 0.05em;">0+
-                Users</span>
+    <!-- Navigation (responsive) -->
+    <nav class="fixed top-0 w-full z-50 bg-[#0a0e17]/90 backdrop-blur-lg border-b border-white/10 transition-all">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center">
+            <div class="text-xl sm:text-2xl font-bold tracking-tight">XCoreTech</div>
+            <div class="hidden md:flex space-x-6 lg:space-x-8 text-gray-300 font-medium">
+                <a href="#features" class="hover:text-white transition">Features</a>
+                <a href="#howitworks" class="hover:text-white transition">How It Works</a>
+                <a href="#performance" class="hover:text-white transition">Performance</a>
+                <a href="#pricing" class="hover:text-white transition">Pricing</a>
             </div>
-          </div>
-          <div class="subtitle">System Analytics & Advanced Performance Tuning</div>
+            <div class="hidden md:flex gap-2 lg:gap-3">
+                <a href="#download" class="download-exe-btn px-4 py-2 rounded-lg border border-white/20 hover:bg-white/5 transition text-sm">Free Download</a>
+                <button id="openPayModalBtn" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 transition shadow-lg text-sm"><i class="fa-solid fa-key mr-1"></i> Activate ₹399</button>
+            </div>
+            <div class="md:hidden text-2xl"><i class="fa-solid fa-bars"></i></div>
         </div>
-      </div>
+    </nav>
 
-      <div class="header-right" style="display: flex; gap: 12px; align-items: center;">
-        <button id="goProBtn" class="btn ghostBtn proActionBtn">
-          <span>🔒</span> Activate Pro
-        </button>
-        <button id="scanBtn" class="btn primary">
-          <span>🔍</span> Scan System
-        </button>
-        <button id="cleanBtn" class="btn danger" disabled>
-          <span>✨</span> Optimize Now
-        </button>
-      </div>
+    <!-- Hero Section (fully responsive) -->
+    <header class="pt-28 sm:pt-32 pb-16 sm:pb-20 px-4 sm:px-6 max-w-7xl mx-auto relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-64 h-64 sm:w-96 sm:h-96 bg-blue-600/20 rounded-full blur-3xl -z-0"></div>
+        <div class="absolute bottom-0 left-0 w-64 h-64 sm:w-80 sm:h-80 bg-cyan-600/10 rounded-full blur-3xl -z-0"></div>
+        <div class="flex flex-col lg:flex-row items-center gap-8 lg:gap-12 relative z-10">
+            <div class="flex-1 text-center lg:text-left">
+                <div class="inline-flex items-center gap-2 bg-green-500/10 border border-green-500/20 px-3 py-1.5 rounded-full text-green-400 text-xs sm:text-sm font-semibold mb-4 sm:mb-6">
+                    <i class="fa-solid fa-shield-halved"></i> Trusted by <span id="live-user-count" class="font-bold">18,342+</span> users
+                </div>
+                <h1 class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight">Boost Your PC Performance <span class="gradient-text">Instantly.</span></h1>
+                <p class="text-gray-400 text-base sm:text-lg mt-4 sm:mt-5 max-w-xl mx-auto lg:mx-0">Intelligent cleaning, startup optimization & system tuning. One‑time payment, no subscription.</p>
+                <div class="flex flex-col sm:flex-row gap-4 mt-6 sm:mt-8 justify-center lg:justify-start">
+                    <a href="#download" class="download-exe-btn bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-xl font-semibold text-center flex items-center justify-center gap-2 pulse text-sm sm:text-base"><i class="fa-solid fa-download"></i> Download Free</a>
+                    <button id="heroPayBtn" class="bg-white/5 border border-white/15 hover:bg-white/10 px-6 py-3 rounded-xl font-semibold text-center flex items-center justify-center gap-2 text-sm sm:text-base"><i class="fa-solid fa-crown"></i> Pro ₹399/Lifetime</button>
+                </div>
+                <div class="flex flex-wrap gap-4 justify-center lg:justify-start text-xs sm:text-sm text-gray-400 mt-6 sm:mt-8">
+                    <span><i class="fa-solid fa-check text-green-500"></i> Free forever base</span>
+                    <span><i class="fa-solid fa-check text-green-500"></i> No admin needed</span>
+                    <span><i class="fa-solid fa-check text-green-500"></i> 100% safe & private</span>
+                </div>
+            </div>
+            <div class="flex-1 flex justify-center w-full max-w-md mx-auto lg:mx-0">
+                <div class="glass-card rounded-2xl w-full mockup-float overflow-hidden shadow-2xl">
+                    <div class="px-4 py-3 border-b border-white/10 flex justify-between items-center bg-black/20">
+                        <span class="font-bold text-sm sm:text-base">XCoreTech PC Optimizer</span>
+                        <span class="text-xs text-gray-400 flex items-center gap-1"><span class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span> System Active</span>
+                    </div>
+                    <div class="p-4 sm:p-6 space-y-3 sm:space-y-4">
+                        <div class="flex justify-between items-center bg-white/5 p-3 rounded-lg"><span class="text-gray-400 text-sm">TOTAL OBJECTS</span><span id="total-objects" class="text-xl sm:text-2xl font-bold">0</span></div>
+                        <div class="flex justify-between items-center bg-white/5 p-3 rounded-lg"><span class="text-gray-400 text-sm">JUNK FILES</span><span id="accumulated-junk" class="text-xl sm:text-2xl font-bold text-red-400">0 GB</span></div>
+                        <div class="flex justify-between items-center bg-white/5 p-3 rounded-lg"><span class="text-gray-400 text-sm">SCAN PROGRESS</span><span id="progress-percent" class="text-xl sm:text-2xl font-bold text-blue-400">0%</span></div>
+                    </div>
+                    <div class="p-4 flex gap-3 border-t border-white/10"><div class="flex-1 bg-blue-600 text-center py-2 rounded-lg font-semibold text-sm"><i class="fa-solid fa-magnifying-glass mr-1"></i> Scan</div><div class="flex-1 bg-white/5 border border-white/10 text-center py-2 rounded-lg text-gray-300 text-sm"><i class="fa-solid fa-wand-magic-sparkles"></i> Optimize</div></div>
+                </div>
+            </div>
+        </div>
     </header>
 
-    <!-- ── System Health Section ── -->
-    <section class="controls card">
-      <div style="display:flex; justify-content: space-between; align-items: center; width: 100%;">
-        <label class="checkbox proLockedFeature" id="autoStartContainer">
-          <input id="autoStartChk" type="checkbox" />
-          <span>Launch at Windows Startup (Auto-Clean) <span class="lockTag">🔒 PRO</span></span>
-        </label>
-        <div class="status" style="margin: 0;">System Status: <span id="statusText"
-            style="color: var(--text-main); font-weight: 600;">Idle</span></div>
-      </div>
-
-      <div class="progress" style="margin-top: 20px; width: 100%;">
-        <div class="metric">
-          <div class="label">Total Objects</div>
-          <div id="totalFiles" class="value">0</div>
+    <!-- Features Grid (responsive) -->
+    <section id="features" class="px-4 sm:px-6 py-16 sm:py-20 max-w-7xl mx-auto">
+        <div class="text-center mb-10 sm:mb-14"><h2 class="text-2xl sm:text-3xl md:text-4xl font-bold">Next-Gen <span class="gradient-text">Optimization</span></h2><p class="text-gray-400 mt-3 max-w-xl mx-auto text-sm sm:text-base">Powerful tools to keep your PC at peak performance.</p></div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+            <div class="glass-card rounded-xl p-5 feature-card"><div class="w-10 h-10 sm:w-12 sm:h-12 bg-blue-500/10 rounded-xl flex items-center justify-center text-blue-400 text-xl sm:text-2xl mb-3"><i class="fa-solid fa-rocket"></i></div><h3 class="text-lg sm:text-xl font-semibold">Fast Parallel Scanning</h3><p class="text-gray-400 text-xs sm:text-sm mt-2">Multi-threaded engine finds hidden junk in seconds.</p></div>
+            <div class="glass-card rounded-xl p-5 feature-card"><div class="w-10 h-10 sm:w-12 sm:h-12 bg-blue-500/10 rounded-xl flex items-center justify-center text-blue-400 text-xl sm:text-2xl mb-3"><i class="fa-solid fa-trash-can-arrow-up"></i></div><h3 class="text-lg sm:text-xl font-semibold">Safe Deletion Pipeline</h3><p class="text-gray-400 text-xs sm:text-sm mt-2">Removes only redundant files intelligently.</p></div>
+            <div class="glass-card rounded-xl p-5 feature-card border-yellow-500/20"><div class="w-10 h-10 sm:w-12 sm:h-12 bg-yellow-500/10 rounded-xl flex items-center justify-center text-yellow-400 text-xl sm:text-2xl mb-3"><i class="fa-solid fa-robot"></i></div><h3 class="text-lg sm:text-xl font-semibold flex items-center gap-2">Auto Cleaning <span class="pro-badge">PRO</span></h3><p class="text-gray-400 text-xs sm:text-sm mt-2">Silent cleaning when idle.</p></div>
+            <div class="glass-card rounded-xl p-5 feature-card border-yellow-500/20"><div class="w-10 h-10 sm:w-12 sm:h-12 bg-yellow-500/10 rounded-xl flex items-center justify-center text-yellow-400 text-xl sm:text-2xl mb-3"><i class="fa-solid fa-gauge-high"></i></div><h3 class="text-lg sm:text-xl font-semibold flex items-center gap-2">Startup Boost <span class="pro-badge">PRO</span></h3><p class="text-gray-400 text-xs sm:text-sm mt-2">Reduce boot time by up to 19%.</p></div>
+            <div class="glass-card rounded-xl p-5 feature-card"><div class="w-10 h-10 sm:w-12 sm:h-12 bg-blue-500/10 rounded-xl flex items-center justify-center text-blue-400 text-xl sm:text-2xl mb-3"><i class="fa-solid fa-key"></i></div><h3 class="text-lg sm:text-xl font-semibold">Secure Licensing</h3><p class="text-gray-400 text-xs sm:text-sm mt-2">Encrypted lifetime key, cross-device.</p></div>
+            <div class="glass-card rounded-xl p-5 feature-card"><div class="w-10 h-10 sm:w-12 sm:h-12 bg-blue-500/10 rounded-xl flex items-center justify-center text-blue-400 text-xl sm:text-2xl mb-3"><i class="fa-solid fa-chart-line"></i></div><h3 class="text-lg sm:text-xl font-semibold">Real-Time Analytics</h3><p class="text-gray-400 text-xs sm:text-sm mt-2">Track performance gains.</p></div>
         </div>
-        <div class="metric">
-          <div class="label">Accumulated Junk</div>
-          <div id="totalSize" class="value">0 B</div>
-        </div>
-        <div class="metric">
-          <div class="label">Analysis Progress</div>
-          <div id="progressPct" class="value">0%</div>
-        </div>
-      </div>
     </section>
 
-    <!-- ── Performance Analytics ── -->
-    <section class="card">
-      <div class="cardTitle">Performance Impact Analytics</div>
-      <div class="impactGrid">
-        <div class="impactCard">
-          <div class="impactLabel">Total Data Purged</div>
-          <div id="impactTotalCleaned" class="impactValue">0 B</div>
+    <!-- How It Works (responsive) -->
+    <section id="howitworks" class="px-4 sm:px-6 py-16 sm:py-20 max-w-6xl mx-auto">
+        <div class="text-center mb-10 sm:mb-14"><h2 class="text-2xl sm:text-3xl md:text-4xl font-bold">Simple <span class="gradient-text">3‑Step</span> Process</h2><p class="text-gray-400 text-sm sm:text-base">From cluttered to optimized in clicks.</p></div>
+        <div class="flex flex-col md:flex-row justify-between items-center gap-6 md:gap-8">
+            <div class="text-center flex-1"><div class="relative inline-block"><div class="step-icon w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center text-2xl sm:text-3xl text-blue-400 bg-[#0a0e17] mx-auto border-2 border-blue-500"><i class="fa-solid fa-magnifying-glass-chart"></i></div><div class="absolute -top-2 -right-2 bg-blue-600 w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center">1</div></div><h3 class="text-lg sm:text-xl font-bold mt-3">Scan</h3><p class="text-gray-400 text-xs sm:text-sm">Deep system analysis</p></div>
+            <div class="hidden md:block text-2xl text-gray-600"><i class="fa-solid fa-arrow-right"></i></div>
+            <div class="text-center flex-1"><div class="relative inline-block"><div class="step-icon w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center text-2xl sm:text-3xl text-blue-400 bg-[#0a0e17] mx-auto border-2 border-blue-500"><i class="fa-solid fa-broom"></i></div><div class="absolute -top-2 -right-2 bg-blue-600 w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center">2</div></div><h3 class="text-lg sm:text-xl font-bold mt-3">Clean</h3><p class="text-gray-400 text-xs sm:text-sm">Safe deletion</p></div>
+            <div class="hidden md:block text-2xl text-gray-600"><i class="fa-solid fa-arrow-right"></i></div>
+            <div class="text-center flex-1"><div class="relative inline-block"><div class="step-icon w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center text-2xl sm:text-3xl text-blue-400 bg-[#0a0e17] mx-auto border-2 border-blue-500"><i class="fa-solid fa-bolt"></i></div><div class="absolute -top-2 -right-2 bg-blue-600 w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center">3</div></div><h3 class="text-lg sm:text-xl font-bold mt-3">Optimize</h3><p class="text-gray-400 text-xs sm:text-sm">Max speed tweaks</p></div>
         </div>
-        <div class="impactCard">
-          <div class="impactLabel">Optimization Cycles</div>
-          <div id="impactRuns" class="impactValue">0</div>
-        </div>
-        <div class="impactCard">
-          <div class="impactLabel">Avg Latency Reduction</div>
-          <div id="impactAvgTime" class="impactValue">0s</div>
-        </div>
-        <div class="impactCard">
-          <div class="impactLabel">Performance Gain</div>
-          <div id="impactSpeedGain" class="impactValue">0%</div>
-        </div>
-      </div>
     </section>
 
-    <!-- ── Conditional Panels ── -->
-
-    <section id="dashboardCard" class="card hidden">
-      <div class="cardTitle">Optimization Summary</div>
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-        <div class="impactCard">
-          <div class="impactLabel">Resources Freed</div>
-          <div id="optJunkRemoved" class="impactValue">0 B</div>
+    <!-- Performance Impact (responsive) -->
+    <section id="performance" class="px-4 sm:px-6 py-16 max-w-7xl mx-auto">
+        <div class="glass-card rounded-2xl p-6 sm:p-8 md:p-12 flex flex-col lg:flex-row gap-8 lg:gap-12 items-center">
+            <div class="flex-1"><h2 class="text-2xl sm:text-3xl font-bold">Real <span class="gradient-text">Performance</span> Impact</h2><p class="text-gray-400 mt-2 text-sm sm:text-base">Average results after using XCoreTech Pro.</p><div class="grid grid-cols-2 gap-4 mt-6"><div><div class="text-2xl sm:text-3xl font-bold text-green-400" id="total-junk-cleared">6.8+ GB</div><div class="text-gray-400 text-xs sm:text-sm">Data Purged</div></div><div><div class="text-2xl sm:text-3xl font-bold text-green-400">21s</div><div class="text-gray-400 text-xs sm:text-sm">Boot Cut</div></div><div><div class="text-2xl sm:text-3xl font-bold text-green-400">22%</div><div class="text-gray-400 text-xs sm:text-sm">Speed Gain</div></div></div></div>
+            <div class="flex-1 w-full"><div class="space-y-4"><div><div class="text-gray-300 mb-1 text-sm">Boot Time Reduction</div><div class="h-8 w-full bg-red-500/20 rounded-md relative flex items-center px-3 text-xs"><span class="absolute left-2">45s</span><div class="h-full bg-green-500/40 rounded-md" style="width: 33%;"></div><span class="absolute right-2 text-green-300">~15s</span></div></div><div><div class="text-gray-300 mb-1 text-sm">Responsiveness</div><div class="h-8 w-full bg-red-500/20 rounded-md relative flex items-center px-3 text-xs"><span class="absolute left-2">Before</span><div class="h-full bg-green-500/40 rounded-md" style="width: 78%;"></div><span class="absolute right-2 text-green-300">After</span></div></div></div></div>
         </div>
-        <div class="impactCard">
-          <div class="impactLabel">Optimization Status</div>
-          <div id="optStatus" class="impactValue" style="color: var(--accent-secondary);">Idle</div>
-        </div>
-      </div>
-    </section>
-    <!-- ── Technician Mode (Advanced Pro Tools) ── -->
-    <section class="card" id="technicianSection">
-      <div class="cardTitle"
-        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <span>🛠️</span> Technician Mode
-        </div>
-        <div id="techLockTag" class="lockTag">🔒 PRO FEATURE</div>
-      </div>
-
-      <div id="techOverlay" class="lockOverlay hidden">
-        <div class="lockCard">
-          <span style="font-size: 24px; margin-bottom: 12px;">🔒</span>
-          <div style="font-weight: 700; margin-bottom: 4px;">Technician Mode Locked</div>
-          <div style="font-size: 11px; color: var(--text-muted);">Activate Pro to unlock advanced system fixes.</div>
-        </div>
-      </div>
-
-      <div class="techGrid">
-        <div class="techTool">
-          <div class="techToolIcon">🌐</div>
-          <div class="techToolInfo">
-            <div class="techToolName">Internet Fix</div>
-            <div class="techToolDesc">Flush DNS, reset Winsock & IP stack.</div>
-            <div class="techToolProgress" id="techInternetProg"
-              style="font-size:10px; color:var(--accent-secondary); margin-top:4px; height:12px;"></div>
-          </div>
-          <button id="techInternetBtn" class="btn ghostBtn techBtn">Run Fix</button>
-        </div>
-
-        <div class="techTool">
-          <div class="techToolIcon">🚀</div>
-          <div class="techToolInfo">
-            <div class="techToolName">RAM Boost</div>
-            <div class="techToolDesc">Optimizes memory usage for all apps.</div>
-            <div class="techToolProgress" id="techRamProg"
-              style="font-size:10px; color:var(--accent-secondary); margin-top:4px; height:12px;"></div>
-          </div>
-          <button id="techRamBtn" class="btn ghostBtn techBtn">Optimize</button>
-        </div>
-
-        <div class="techTool">
-          <div class="techToolIcon">⚙️</div>
-          <div class="techToolInfo">
-            <div class="techToolName">Auto Fix</div>
-            <div class="techToolDesc">Fix common Windows Update & Spooler issues.</div>
-            <div class="techToolProgress" id="techAutoProg"
-              style="font-size:10px; color:var(--accent-secondary); margin-top:4px; height:12px;"></div>
-          </div>
-          <button id="techAutoBtn" class="btn ghostBtn techBtn">Repair</button>
-        </div>
-
-        <div class="techTool fullService">
-          <div class="techToolIcon">⚡</div>
-          <div class="techToolInfo">
-            <div class="techToolName">FULL SERVICE</div>
-            <div class="techToolDesc">Execute all fixes in a single sequence.</div>
-            <div class="techToolProgress" id="techFullProg"
-              style="font-size:10px; color:var(--accent-secondary); margin-top:4px; height:12px;"></div>
-          </div>
-          <button id="techFullBtn" class="btn primary techBtn">One-Click Fix</button>
-        </div>
-      </div>
     </section>
 
-    <!-- ── Startup Control Center (Always Visible) ── -->
-    <section class="card" id="startupSection">
-      <div class="cardTitle"
-        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <span>⚡</span> Windows Startup Manifest
+    <!-- PRICING + DIRECT UPI (Fully Responsive) -->
+    <section id="pricing" class="px-4 sm:px-6 py-16 sm:py-20 max-w-7xl mx-auto">
+        <div class="text-center mb-10 sm:mb-12"><h2 class="text-2xl sm:text-3xl md:text-4xl font-bold">One‑Time <span class="gradient-text">₹399</span> • Lifetime Pro</h2><p class="text-gray-400 text-sm sm:text-base max-w-xl mx-auto">Direct UPI payment → Money goes directly to seller. No middleman.</p></div>
+        <div class="flex flex-col md:flex-row gap-6 justify-center items-stretch">
+            <div class="glass-card rounded-2xl p-6 sm:p-8 flex-1 max-w-sm mx-auto w-full"><h3 class="text-xl sm:text-2xl font-bold">Free Edition</h3><div class="mt-3"><span class="text-3xl sm:text-4xl font-bold">₹0</span><span class="text-gray-400"> lifetime</span></div><ul class="mt-5 space-y-2 text-sm"><li class="flex gap-2"><i class="fa-solid fa-check text-green-500 mt-1"></i> Fast Parallel Scanning</li><li class="flex gap-2"><i class="fa-solid fa-check text-green-500 mt-1"></i> Safe Deletion</li><li class="flex gap-2"><i class="fa-solid fa-check text-green-500 mt-1"></i> System Analytics</li><li class="flex gap-2 opacity-50"><i class="fa-solid fa-xmark text-gray-500 mt-1"></i> Auto Background Cleaning</li><li class="flex gap-2 opacity-50"><i class="fa-solid fa-xmark text-gray-500 mt-1"></i> Startup Optimizer</li></ul><a href="#download" class="download-exe-btn mt-6 block text-center border border-white/20 py-2 rounded-lg hover:bg-white/5 transition text-sm">Download Free</a></div>
+            <div class="relative glass-card rounded-2xl p-6 sm:p-8 flex-1 max-w-sm mx-auto w-full border-blue-500/40 shadow-xl shadow-blue-500/10 md:scale-105 pricing-card-scale"><div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-xs font-bold px-3 py-1 rounded-full">🔥 MOST POPULAR</div><h3 class="text-xl sm:text-2xl font-bold mt-1">💎 Pro Lifetime</h3><div class="mt-3"><span class="text-4xl sm:text-5xl font-extrabold gradient-text">₹399</span><span class="text-gray-400 ml-1"> one-time</span></div><p class="text-green-400 text-xs sm:text-sm mt-1"><i class="fa-solid fa-infinity"></i> Direct UPI (Seller receives ₹399)</p><ul class="mt-5 space-y-2 text-sm"><li class="flex gap-2"><i class="fa-solid fa-check text-green-500"></i> Auto Clean (scheduled)</li><li class="flex gap-2"><i class="fa-solid fa-check text-green-500"></i> Deep Clean + Junk Remover</li><li class="flex gap-2"><i class="fa-solid fa-check text-green-500"></i> Startup Boost & Boot Optimizer</li><li class="flex gap-2"><i class="fa-solid fa-check text-green-500"></i> No Ads, Lifetime Updates</li><li class="flex gap-2"><i class="fa-solid fa-check text-green-500"></i> Priority Support</li></ul>
+                <button id="proPayBtn" class="mt-6 w-full bg-blue-600 hover:bg-blue-700 py-2.5 rounded-xl font-bold transition pulse shadow-lg text-sm sm:text-base"><i class="fa-solid fa-indian-rupee-sign mr-1"></i> Pay ₹399 via UPI (Direct)</button>
+                <p class="text-xs text-gray-400 text-center mt-3">Pay to: <span class="text-cyan-300">muhammedrameez2000-7@okaxis</span><br>Send screenshot to get license key.</p></div>
         </div>
-        <div style="display: flex; gap: 10px; align-items: center;">
-          <span id="startupLockTag" class="lockTag" style="display: none;">🔒 PRO FEATURE</span>
-          <button class="btn ghostBtn" id="startupRefreshBtn" style="padding: 6px 14px; font-size: 11px;">
-            🔄 Refresh Manifest
-          </button>
-        </div>
-      </div>
+    </section>
 
-      <div id="startupBody">
-        <div id="startupList"
-          style="max-height: 320px; overflow-y: auto; border: 1px solid var(--border-main); border-radius: var(--radius-md); background: var(--bg-panel-alt); position: relative;">
-          <div id="startupOverlay" class="lockOverlay hidden">
-            <div class="lockCard">
-              <span style="font-size: 24px; margin-bottom: 12px;">🔒</span>
-              <div style="font-weight: 700; margin-bottom: 4px;">Pro Feature Locked</div>
-              <div style="font-size: 11px; color: var(--text-muted);">Activate Pro to manage startup programs.</div>
+    <!-- Download & Support Section -->
+    <section id="download" class="px-4 sm:px-6 py-16 max-w-6xl mx-auto text-center"><div class="bg-gradient-to-r from-blue-900/20 to-cyan-900/20 rounded-2xl p-6 sm:p-10 border border-white/10"><h2 class="text-2xl sm:text-3xl font-bold">Experience a Faster PC.</h2><p class="text-gray-300 mt-2 text-sm sm:text-base"><span id="cta-user-count">18,000+</span> users already optimized with XCoreTech.</p><div class="mt-6"><a href="#" class="download-exe-btn bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-xl inline-flex items-center gap-2 font-bold text-sm sm:text-base"><i class="fa-brands fa-windows"></i> Download for Windows (Free)</a></div><p class="text-gray-500 text-xs mt-4" id="app-version-info">Version 1.4.0 | Win 10/11 | 26MB</p></div></section>
+
+    <!-- MODAL: DIRECT UPI (Fully responsive with scroll) -->
+    <div id="paymentModal" class="fixed inset-0 z-50 hidden items-center justify-center modal-bg transition-all duration-300 p-4">
+        <div class="max-w-md w-full bg-[#0f141f] rounded-3xl border border-gray-700 shadow-2xl dialog-enter overflow-y-auto max-h-[90vh] modal-inner">
+            <div class="sticky top-0 bg-[#0f141f] flex justify-between items-center p-4 border-b border-gray-700">
+                <h3 class="text-xl sm:text-2xl font-bold gradient-text"><i class="fa-solid fa-circle-dollar-to-slot"></i> Direct UPI Payment</h3>
+                <button id="closeModalBtn" class="text-gray-400 hover:text-white text-2xl">&times;</button>
             </div>
-          </div>
-          <div style="padding: 30px; text-align: center; color: var(--text-dim); font-size: 13px;">
-            Analyzing system boot manifest...
-          </div>
+            <div class="p-5 space-y-4">
+                <div class="text-center"><div class="text-2xl sm:text-3xl font-extrabold text-white">₹399<span class="text-sm text-gray-400"> Lifetime</span></div><div class="text-xs sm:text-sm text-green-400 mt-1">Money goes directly to seller's bank account</div></div>
+                <div class="bg-[#111827] rounded-xl p-3 border border-blue-500/30"><p class="font-semibold text-sm flex items-center gap-2"><i class="fa-brands fa-google-pay text-blue-400"></i> UPI ID (Pay to):</p><div class="flex flex-wrap justify-between items-center gap-2 mt-2"><span id="sellerUpiIdDisplay" class="font-mono font-bold text-cyan-300 text-xs sm:text-sm break-all">muhammedrameez2000-7@okaxis</span><button id="copyUpiId" class="text-xs bg-gray-700 px-2 py-1 rounded"><i class="fa-regular fa-copy"></i> Copy</button></div><div class="flex justify-between mt-2 text-sm"><span class="text-gray-400">Amount:</span><span class="font-bold">₹399.00</span></div></div>
+                <div class="flex flex-col items-center gap-3"><div id="qrcodeContainer" class="bg-white p-2 rounded-xl inline-block"></div><a id="upiDeepLinkBtn" href="#" target="_blank" class="w-full bg-green-600 hover:bg-green-700 text-center py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2"><i class="fa-brands fa-google-pay"></i> Pay with UPI App</a></div>
+                <div class="bg-blue-900/20 rounded-xl p-3 border border-blue-500/20"><p class="text-xs font-semibold text-center"><i class="fa-regular fa-envelope"></i> Send payment proof + your email to get license key:</p><div class="flex flex-col sm:flex-row gap-2 mt-2"><a href="mailto:xcoretech@yahoo.com?subject=Pro%20License%20Payment%20-%20₹399&body=Hi,%20I%20paid%20₹399%20for%20XCoreTech%20Pro.%20Transaction%20ID:%20[Paste]%0AMy%20email%20for%20license:" class="flex-1 text-center bg-gray-800 hover:bg-gray-700 py-2 rounded-lg text-xs">📧 xcoretech@yahoo.com</a><a href="https://wa.me/919446960834?text=Hello%2C%20I%20paid%20₹399%20for%20XCoreTech%20Pro%20license.%20Transaction%20ID%3A%20%5Bpaste%5D%20-%20My%20email%3A" target="_blank" class="flex-1 text-center whatsapp-btn py-2 rounded-lg text-white font-semibold text-xs"><i class="fa-brands fa-whatsapp"></i> WhatsApp +91 9446960834</a></div><p class="text-[11px] text-gray-400 text-center mt-2">License key sent within 2-12 hours after verification.</p></div>
+                <p class="text-center text-[11px] text-gray-400">✅ No third-party gateway — direct credit to seller.<br>🔐 Lifetime license guaranteed.</p>
+            </div>
         </div>
-        <div id="startupStatusEl"
-          style="margin-top: 12px; font-size: 11px; color: var(--accent-secondary); font-style: italic; min-height: 1.2em;">
-        </div>
-      </div>
-    </section>
-
-    <!-- ── Pro Activation Modal ── -->
-    <div id="activateModal" class="modal">
-      <div class="modalCard">
-        <div style="text-align: center; margin-bottom: 24px;">
-          <div style="font-size: 32px; margin-bottom: 16px;">🔒</div>
-          <div class="modalTitle">Activate Pro Version</div>
-        </div>
-
-        <p id="licenseInfoText"
-          style="font-size: 13px; color: var(--text-muted); line-height: 1.6; margin-bottom: 24px;">
-          🔒 <strong>Activate Pro Version</strong> to unlock automatic cleaning and startup optimization.
-          Enter your license key below to enable full background maintenance on this device.
-          Each license is valid for <strong>one device only</strong> and is securely verified online.
-          Once activated, all Pro features will be immediately unlocked and run silently in the background.
-        </p>
-
-        <div style="margin-bottom: 20px;">
-          <label
-            style="display: block; font-size: 11px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; margin-bottom: 8px;">License
-            Key</label>
-          <input id="licenseKeyInput" type="text" class="inputField" placeholder="XXXX-XXXX-XXXX-XXXX"
-            style="margin-bottom: 0; text-align: center; letter-spacing: 2px; font-family: monospace; font-weight: 700;" />
-          <div id="licenseError"
-            style="font-size: 11px; color: var(--accent-danger); margin-top: 8px; min-height: 1.2em; text-align: center;">
-          </div>
-        </div>
-
-        <div style="display: flex; flex-direction: column; gap: 12px;">
-          <button id="activateBtn" class="btn primary" style="width: 100%;">Verify & Activate</button>
-          <div style="display: flex; gap: 12px;">
-            <button id="buyKeyBtn" class="btn ghostBtn" style="flex: 1; font-size: 12px;">Purchase Key</button>
-            <button id="closeActivateBtn" class="btn ghostBtn" style="flex: 1; font-size: 12px;">Later</button>
-          </div>
-        </div>
-      </div>
     </div>
 
-    <!-- ── Professional Footer ── -->
-    <footer class="footer">
-      <div class="contactBox">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-          <div>
-            <div class="owner">Engineering Excellence by XCoreTech Team</div>
-            <div class="phone">Support: +91 7907858474</div>
-            <div class="offer">Precision-engineered for Windows 10/11 Performance</div>
-          </div>
-          <div style="text-align: right;">
-            <div class="services">
-              <span>✔ OS Virtualization</span>
-              <span>✔ Latency Optimization</span>
-              <span>✔ System Hardening</span>
-              <span>✔ Advanced Diagnostics</span>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div
-        style="margin-top: 24px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--text-dim);">
-        <div>© 2024 XCoreTech Team. All Rights Reserved.</div>
-        <div style="display: flex; gap: 16px;">
-          <span>Version 1.3.6</span>
-          <span>Commercial License</span>
-        </div>
-      </div>
-    </footer>
-  </div>
+    <footer class="border-t border-white/10 py-8 px-4 text-center text-gray-500 text-xs"><div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3"><div>© 2026 XCoreTech PC Optimizer | Direct UPI Payments</div><div class="flex gap-4"><a href="#" class="hover:text-white">Privacy</a><a href="#" class="hover:text-white">Terms</a><a href="mailto:xcoretech@yahoo.com" class="hover:text-white">Support</a></div></div></footer>
 
-  <!-- ── Interactive Overlays ── -->
-  <div id="busyOverlay" class="busyOverlay">
-    <div class="busyCard">
-      <div class="spinner"></div>
-      <div id="busyMessage" style="font-weight: 600; letter-spacing: 0.05em;">EXPLAINING SYSTEM STATE...</div>
-    </div>
-  </div>
-
-  <script src="renderer.js"></script>
+    <script>
+        (function() {
+            // Direct UPI Configuration
+            const SELLER_UPI = "muhammedrameez2000-7@okaxis";
+            const AMOUNT = "399";
+            const PAYEE_NAME = "XCoreTech";
+            const NOTE = "XCoreTech Pro License";
+            const upiUrl = `upi://pay?pa=${encodeURIComponent(SELLER_UPI)}&pn=${encodeURIComponent(PAYEE_NAME)}&am=${AMOUNT}&cu=INR&tn=${encodeURIComponent(NOTE)}`;
+            
+            document.getElementById("sellerUpiIdDisplay").innerText = SELLER_UPI;
+            document.getElementById("upiDeepLinkBtn").href = upiUrl;
+            const qrDiv = document.getElementById("qrcodeContainer");
+            if(qrDiv) { qrDiv.innerHTML = ""; new QRCode(qrDiv, { text: upiUrl, width: 160, height: 160, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.M }); }
+            
+            document.getElementById("copyUpiId")?.addEventListener("click", () => { navigator.clipboard.writeText(SELLER_UPI); alert("UPI ID copied!"); });
+            
+            // Modal logic
+            const modal = document.getElementById("paymentModal");
+            const openBtns = ["openPayModalBtn", "heroPayBtn", "proPayBtn"];
+            openBtns.forEach(id => { document.getElementById(id)?.addEventListener("click", () => { modal.classList.remove("hidden"); modal.classList.add("flex"); }); });
+            document.getElementById("closeModalBtn")?.addEventListener("click", () => { modal.classList.add("hidden"); modal.classList.remove("flex"); });
+            window.addEventListener("click", (e) => { if(e.target === modal) modal.classList.add("hidden"); });
+            
+            // Smooth scroll
+            document.querySelectorAll('a[href^="#"]').forEach(a => { a.addEventListener("click", function(e) { let hash = this.getAttribute("href"); if(hash !== "#" && document.querySelector(hash)) { e.preventDefault(); document.querySelector(hash).scrollIntoView({ behavior: "smooth" }); } }); });
+            
+            // Dynamic mockup animation (responsive)
+            let prog = 0;
+            const totSpan = document.getElementById("total-objects"), junkSpan = document.getElementById("accumulated-junk"), progSpan = document.getElementById("progress-percent");
+            let itv = setInterval(() => { prog += Math.floor(Math.random() * 5)+2; if(prog>=100) prog=100; let ob = Math.floor(15840*(prog/100)); let jk = (6.82*(prog/100)).toFixed(2); if(totSpan) totSpan.innerText = ob.toLocaleString(); if(junkSpan) junkSpan.innerText = jk+" GB"; if(progSpan) progSpan.innerText = prog+"%"; if(prog===100) clearInterval(itv); }, 45);
+            
+            // GitHub release fetch (demo)
+            async function fetchRelease() { try { let res = await fetch("https://api.github.com/repos/mhmdrameez/xcoretechelectron/releases/latest"); if(res.ok) { let data = await res.json(); let exe = data.assets.find(a => a.name.endsWith(".exe")); if(exe) { document.querySelectorAll(".download-exe-btn").forEach(btn => { btn.href = exe.browser_download_url; btn.target = "_blank"; }); let verSpan = document.getElementById("app-version-info"); if(verSpan && data.tag_name) verSpan.innerText = `Version ${data.tag_name} | Windows 10/11 | ${(exe.size/1048576).toFixed(1)}MB`; } } } catch(e){} } fetchRelease();
+            
+            async function userStats() { try { let r = await fetch("https://api.countapi.xyz/hit/xcoretech_live/visits").catch(()=>null); if(r && r.ok) { let d = await r.json(); let c = d.value || 18450; document.getElementById("live-user-count").innerText = c.toLocaleString(); document.getElementById("cta-user-count").innerText = c.toLocaleString()+"+"; } } catch(e){} } userStats();
+        })();
+    </script>
 </body>
-
 </html>

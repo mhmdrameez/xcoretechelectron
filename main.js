@@ -60,6 +60,9 @@ const { getAutoStartEnabled, setAutoStartEnabled, formatBytes, debounceMs } = re
 
 installCrashHandler(sendEvent);
 
+const AUTO_START_NAME = "XCoreTechOptimizer"; // Consistent name across all versions
+
+
 // ── globals ───────────────────────────────────────────────────────────────────
 let mainWindow       = null;
 let tray             = null;
@@ -94,13 +97,32 @@ function loadLicense() {
   try {
     if (fs.existsSync(licensePath)) {
       const encrypted = fs.readFileSync(licensePath);
+      if (!encrypted || encrypted.length === 0) return { isPro: false, key: "", activatedAt: null, deviceId: null };
+
       if (safeStorage.isEncryptionAvailable()) {
-        const decrypted = safeStorage.decryptString(encrypted);
-        return JSON.parse(decrypted);
+        try {
+          const decrypted = safeStorage.decryptString(encrypted);
+          const parsed = JSON.parse(decrypted);
+          if (parsed && typeof parsed === "object") return parsed;
+        } catch (e) {
+          // If decryption fails, it might be due to user change or OS lock
+          console.error("[License] Decryption failed:", e);
+          sendEvent("activity", { name: "System Boot", junk: `license_load_error | ${e.message || "decryption_failed"}` }, { force: true, immediate: true });
+          
+          // Last resort: check if it's plain text (rare but possible if safeStorage was unavailable during save)
+          try {
+            return JSON.parse(encrypted.toString("utf8"));
+          } catch (_) {}
+        }
+      } else {
+        try {
+          return JSON.parse(encrypted.toString("utf8"));
+        } catch (_) {}
       }
-      return JSON.parse(encrypted.toString("utf8"));
     }
-  } catch (_) {}
+  } catch (err) {
+    console.error("[License] Load error:", err);
+  }
   return { isPro: false, key: "", activatedAt: null, deviceId: null };
 }
 
@@ -118,10 +140,7 @@ function saveLicense(data) {
   } catch (_) {}
 }
 
-let licenseState = loadLicense();
-if (process.env.PLAYWRIGHT_TEST) {
-  licenseState.isPro = true;
-}
+let licenseState = { isPro: false, key: "", activatedAt: null, deviceId: null };
 
 // ── unique device identification ──────────────────────────────────────────────
 async function getSystemId() {
@@ -834,6 +853,12 @@ if (!gotLock) {
     initAnalytics({ endpoint, getSystemInfo, getLocation });
     primeLocation(path.join(app.getPath("userData"), "location-cache.json"));
 
+    // Load license after app is ready to ensure safeStorage is available
+    licenseState = loadLicense();
+    if (process.env.PLAYWRIGHT_TEST) {
+      licenseState.isPro = true;
+    }
+
     createWindow();
     createTray();
     setupIpc();
@@ -842,32 +867,43 @@ if (!gotLock) {
     setTimeout(async () => {
       try {
         if (licenseState.isPro) {
-          await setAutoStartEnabled(app.getName(), true);
+          await setAutoStartEnabled(AUTO_START_NAME, true);
         } else {
           // If not PRO, ensure it is disabled to prevent unauthorized background runs
-          await setAutoStartEnabled(app.getName(), false);
+          await setAutoStartEnabled(AUTO_START_NAME, false);
         }
       } catch (_) {}
-    }, 2000);
+    }, 5000); // 5s delay for registry stability
 
     // Identify boot-time launch and log to sheet
     const isHidden = process.argv.some((a) => a.toLowerCase() === "--hidden");
     const isAutoClean = process.argv.some((a) => a.toLowerCase() === "--autoclean");
     
     if (isHidden || isAutoClean) {
-      sendEvent("app_open", { name: "System Boot", junk: "boot_launch" }, { force: true, immediate: true });
+      // Boot reporting: Wait for network to ensure the event is logged
+      const reportBoot = async () => {
+        let attempts = 0;
+        const { net } = require("electron");
+        while (!net.isOnline() && attempts < 10) {
+          await new Promise(r => setTimeout(r, 3000));
+          attempts++;
+        }
+        await sendEvent("app_open", { name: "System Boot", junk: "boot_launch" }, { force: true, immediate: true });
+      };
+      reportBoot();
     } else {
       await sendEvent("app_open", { name: "Manual Launch" }, { immediate: true });
     }
 
     // Stagger heavy async work so it doesn't compete with first paint
-    setTimeout(() => updater().initUpdater(send), 5000);  // updater: 5 s delay
+    setTimeout(() => updater().initUpdater(send), 8000);  // updater: 8 s delay
 
     if (isAutoClean) {
       if (licenseState.isPro) {
+        // Delay auto-clean to let the system stabilize
         setTimeout(() => {
           runAutoClean({ sendStatus, send });
-        }, 2000);
+        }, 12000); // 12s delay for background runs
       } else {
         sendStatus("Auto-clean: Pro Version Required.");
         sendEvent("activity", { name: "Unauthorized Auto-Clean", junk: "license_required" }, { force: true, immediate: true });

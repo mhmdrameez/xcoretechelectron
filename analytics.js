@@ -103,20 +103,38 @@ async function sendEvent(eventName, payload, options) {
   const opts = (options && typeof options === "object") ? options : {};
   if (!baseUrl || !ALLOWED_EVENTS.has(eventName))
     return { ok: false, error: "Event not allowed or endpoint not set" };
-  if (!isOnlineNow())
-    return { ok: false, error: "Offline" };
 
   const isCrash = eventName === "crash";
+  const isCritical = !!opts.force;
   const now = Date.now();
-  if (!isCrash && !opts.force && now - lastNormalSentAt < NORMAL_GAP_MS)
+
+  if (!isCrash && !isCritical && now - lastNormalSentAt < NORMAL_GAP_MS)
     return { ok: false, error: "Throttled" };
 
   const url     = `${baseUrl}${buildQuery(eventName, payload)}`;
   const delayMs = opts.immediate ? 0 : DELAY_MS;
 
-  const performSend = async () => {
+  const performSend = async (retryCount = 0) => {
+    if (!isOnlineNow()) {
+      if (isCritical && retryCount < 5) {
+        const nextDelay = 2000 * (retryCount + 1);
+        await new Promise(r => setTimeout(r, nextDelay));
+        return performSend(retryCount + 1);
+      }
+      return { ok: false, error: "Offline" };
+    }
+
     const r = await httpGet(url, false, MAX_REDIRECTS);
-    if (!isCrash && r.ok) lastNormalSentAt = Date.now();
+    if (r.ok) {
+      if (!isCrash) lastNormalSentAt = Date.now();
+      return r;
+    }
+
+    if (isCritical && retryCount < 5) {
+      const nextDelay = 3000 * (retryCount + 1);
+      await new Promise(r => setTimeout(r, nextDelay));
+      return performSend(retryCount + 1);
+    }
     return r;
   };
 
