@@ -616,6 +616,31 @@ function setupIpc() {
     }
   });
 
+  ipcMain.handle("license:activatePaid", async (_e, payment) => {
+    try {
+      const p = payment && typeof payment === "object" ? payment : {};
+      const paymentId = String(p.razorpay_payment_id || p.paymentId || "").trim();
+      if (!/^pay_[A-Za-z0-9]+$/.test(paymentId)) {
+        return { ok: false, error: "Invalid Razorpay payment response." };
+      }
+
+      const deviceId = await getSystemId();
+      licenseState = {
+        isPro: true,
+        key: `RAZORPAY-${paymentId}`,
+        activatedAt: Date.now(),
+        deviceId,
+        paymentProvider: "razorpay",
+        paymentId,
+      };
+      saveLicense(licenseState);
+      await sendEvent("activity", { name: "Razorpay", junk: `payment_activated | ${paymentId}` }, { force: true, immediate: true });
+      return { ok: true, msg: "Payment successful. Pro Version Activated!", license: licenseState };
+    } catch (err) {
+      return { ok: false, error: "Payment activation failed." };
+    }
+  });
+
   // stats / system
   ipcMain.handle("stats:get",   async () => ({ ok: true, stats: getStatsSnapshot() }));
   ipcMain.handle("system:get",  async () => ({ ok: true, system: getSystemInfo() }));

@@ -263,42 +263,28 @@
           <button id="closePaymentBtn" class="modalCloseBtn" aria-label="Close payment modal">&times;</button>
         </div>
 
-        <div class="sellerNotice">
-          Money directly goes to seller:
-          <strong id="sellerUpiIdNotice">muhammedrameez2000-7@okaxis</strong>
-        </div>
-
         <div class="paymentPanel">
-          <div class="paymentPanelTitle">UPI Details (Pay to this ID)</div>
-          <div class="paymentDetail">
-            <span>UPI ID</span>
-            <div class="upiCopyRow">
-              <strong id="sellerUpiIdDisplay">muhammedrameez2000-7@okaxis</strong>
-              <button id="copyUpiId" class="copyBtn" type="button">Copy</button>
-            </div>
-          </div>
+          <div class="paymentPanelTitle">Secure Razorpay Checkout</div>
           <div class="amountRow">
             <span>Amount</span>
             <strong>₹399.00 INR</strong>
           </div>
+          <div class="amountRow">
+            <span>Product</span>
+            <strong>XCoreTech Lifetime Pro</strong>
+          </div>
           <div class="paymentHint">
-            Scan QR or click UPI button, complete payment. After payment, send screenshot or transaction ID to get your license key.
+            Pay securely using Razorpay. After successful payment, keep the Razorpay payment ID for activation support.
           </div>
         </div>
 
-        <div class="qrWrap">
-          <div id="qrcodeContainer" class="qrBox"></div>
-        </div>
-
-        <button id="upiDeepLinkBtn" class="btn upiPayBtn" type="button">
-          Pay with UPI App (GPay / PhonePe / Paytm)
+        <button id="razorpayCheckoutBtn" class="btn razorpayPayBtn" type="button">
+          Pay Securely with Razorpay
         </button>
 
-        <div class="proofPanel">
-          <div class="paymentPanelTitle">Send payment proof & your email to:</div>
-          <button id="paymentEmailBtn" class="proofBtn" type="button">Email: xcoretech@yahoo.com</button>
-          <button id="paymentWhatsappBtn" class="proofBtn whatsappBtn" type="button">WhatsApp Business: +91 9446960834</button>
-          <div class="paymentHint">We will send your lifetime activation key within 2-12 hours after verification.</div>
+        <div class="paymentStatusPanel">
+          <div id="paymentStatusText" class="paymentStatusText">Ready for secure card, UPI, wallet, and netbanking payment.</div>
+          <button id="paymentEmailBtn" class="proofBtn" type="button">Contact Support: xcoretech@yahoo.com</button>
         </div>
       </div>
     </div>
@@ -326,7 +312,7 @@
         style="margin-top: 24px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--text-dim);">
         <div>© 2024 XCoreTech Team. All Rights Reserved.</div>
         <div style="display: flex; gap: 16px;">
-          <span>Version 1.3.24</span>
+          <span>Version 1.3.27</span>
           <span>Commercial License</span>
         </div>
       </div>

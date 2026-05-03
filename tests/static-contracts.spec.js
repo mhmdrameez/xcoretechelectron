@@ -30,6 +30,8 @@ test.describe('Static App Contracts', () => {
   test('preload exposes the external link bridge', () => {
     expect(read('preload.js')).toContain('openExternal');
     expect(read('preload.js')).toContain('app:openExternal');
+    expect(read('preload.js')).toContain('activatePaidLicense');
+    expect(read('preload.js')).toContain('license:activatePaid');
   });
 
   test('main process only allows supported external link protocols', () => {
@@ -43,12 +45,9 @@ test.describe('Static App Contracts', () => {
     for (const id of [
       'paymentModal',
       'closePaymentBtn',
-      'sellerUpiIdDisplay',
-      'copyUpiId',
-      'qrcodeContainer',
-      'upiDeepLinkBtn',
+      'razorpayCheckoutBtn',
+      'paymentStatusText',
       'paymentEmailBtn',
-      'paymentWhatsappBtn',
     ]) {
       expect(html).toContain(`id="${id}"`);
     }
@@ -56,11 +55,12 @@ test.describe('Static App Contracts', () => {
 
   test('payment constants are present in renderer', () => {
     const renderer = read('renderer.js');
-    expect(renderer).toContain('muhammedrameez2000-7@okaxis');
     expect(renderer).toContain('PAYMENT_AMOUNT = "399"');
+    expect(renderer).toContain('PAYMENT_AMOUNT_SUBUNITS = 39900');
+    expect(renderer).toContain('RAZORPAY_KEY_ID');
+    expect(renderer).toContain('https://checkout.razorpay.com/v1/checkout.js');
     expect(renderer).toContain('XCoreTech Software');
     expect(renderer).toContain('xcoretech@yahoo.com');
-    expect(renderer).toContain('https://wa.me/919446960834');
   });
 
   test('payment modal styles include responsive mobile handling', () => {

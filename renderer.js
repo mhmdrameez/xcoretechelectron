@@ -38,13 +38,9 @@
   const buyKeyBtn = el("buyKeyBtn");
   const paymentModal = el("paymentModal");
   const closePaymentBtn = el("closePaymentBtn");
-  const sellerUpiIdNotice = el("sellerUpiIdNotice");
-  const sellerUpiIdDisplay = el("sellerUpiIdDisplay");
-  const copyUpiIdBtn = el("copyUpiId");
-  const qrcodeContainer = el("qrcodeContainer");
-  const upiDeepLinkBtn = el("upiDeepLinkBtn");
+  const razorpayCheckoutBtn = el("razorpayCheckoutBtn");
+  const paymentStatusText = el("paymentStatusText");
   const paymentEmailBtn = el("paymentEmailBtn");
-  const paymentWhatsappBtn = el("paymentWhatsappBtn");
   const activateBtn = el("activateBtn");
   const licenseKeyInput = el("licenseKeyInput");
   const licenseErrorEl = el("licenseError");
@@ -63,14 +59,14 @@
   // ── constants ──────────────────────────────────────────────────────────────
   const MAX_LIST_ROWS = 2000;
   const VISIBLE_ROWS = 100;
-  const SELLER_UPI_ID = "muhammedrameez2000-7@okaxis";
   const PAYMENT_AMOUNT = "399";
+  const PAYMENT_AMOUNT_SUBUNITS = 39900;
+  const RAZORPAY_KEY_ID = "rzp_test_UdeEdGNNKjTGsB";
+  const RAZORPAY_CHECKOUT_URL = "https://checkout.razorpay.com/v1/checkout.js";
   const PAYEE_NAME = "XCoreTech Software";
-  const NOTE_TEXT = "XCoreTech Pro License 399 Lifetime";
+  const PRODUCT_DESCRIPTION = "XCoreTech Lifetime Pro License";
   const SUPPORT_EMAIL = "xcoretech@yahoo.com";
-  const SUPPORT_WHATSAPP_URL = "https://wa.me/919446960834";
-  const upiUrl = `upi://pay?pa=${encodeURIComponent(SELLER_UPI_ID)}&pn=${encodeURIComponent(PAYEE_NAME)}&am=${PAYMENT_AMOUNT}&cu=INR&tn=${encodeURIComponent(NOTE_TEXT)}`;
-  const proofEmailUrl = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("XCoreTech Pro payment proof")}&body=${encodeURIComponent("Hello XCoreTech,\n\nI completed the ₹399 Lifetime Pro payment.\n\nEmail for license key:\nTransaction ID:\n\nThank you.")}`;
+  const paymentSupportUrl = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("XCoreTech Pro Razorpay payment support")}&body=${encodeURIComponent("Hello XCoreTech,\n\nI completed the Razorpay payment for XCoreTech Lifetime Pro.\n\nEmail for license key:\nRazorpay Payment ID:\n\nThank you.")}`;
 
   // ── in-memory state ONLY — zero localStorage / zero file cache ─────────────
   let scanning = false;
@@ -265,36 +261,113 @@
     window.location.href = url;
   }
 
-  function generatePaymentQr() {
-    if (!qrcodeContainer) return;
-    const size = window.innerWidth < 480 ? 146 : 164;
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&margin=8&data=${encodeURIComponent(upiUrl)}`;
-    qrcodeContainer.innerHTML = "";
-    qrcodeContainer.removeAttribute("style");
-    const img = document.createElement("img");
-    img.width = size;
-    img.height = size;
-    img.alt = "UPI payment QR code";
-    img.src = qrUrl;
-    img.onerror = () => {
-      qrcodeContainer.textContent = "QR unavailable. Use the UPI ID above.";
-      qrcodeContainer.style.color = "#111827";
-      qrcodeContainer.style.fontWeight = "700";
-      qrcodeContainer.style.fontSize = "12px";
-      qrcodeContainer.style.textAlign = "center";
-      qrcodeContainer.style.padding = "16px";
-    };
-    qrcodeContainer.appendChild(img);
+  function setPaymentStatus(message, isError) {
+    if (!paymentStatusText) return;
+    paymentStatusText.textContent = message;
+    paymentStatusText.classList.toggle("error", !!isError);
+  }
+
+  function isRazorpayConfigured() {
+    const keyId = getRazorpayKeyId();
+    return /^rzp_(test|live)_[A-Za-z0-9]+$/.test(keyId) && !keyId.includes("REPLACE");
+  }
+
+  function getRazorpayKeyId() {
+    return String(window.RAZORPAY_KEY_ID || RAZORPAY_KEY_ID || "").trim();
+  }
+
+  function loadRazorpayCheckout() {
+    if (window.Razorpay) return Promise.resolve();
+    if (loadRazorpayCheckout.promise) return loadRazorpayCheckout.promise;
+
+    loadRazorpayCheckout.promise = new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = RAZORPAY_CHECKOUT_URL;
+      script.async = true;
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error("Unable to load Razorpay Checkout."));
+      document.head.appendChild(script);
+    });
+    return loadRazorpayCheckout.promise;
+  }
+
+  async function openRazorpayCheckout() {
+    if (!isRazorpayConfigured()) {
+      setPaymentStatus("Razorpay key id is missing. Add your live key id in renderer.js.", true);
+      return;
+    }
+
+    try {
+      setPaymentStatus("Opening Razorpay Checkout...");
+      await loadRazorpayCheckout();
+
+      const checkout = new window.Razorpay({
+        key: getRazorpayKeyId(),
+        amount: PAYMENT_AMOUNT_SUBUNITS,
+        currency: "INR",
+        name: PAYEE_NAME,
+        description: PRODUCT_DESCRIPTION,
+        notes: {
+          product: "lifetime_pro",
+          app: "xcoretech_pc_optimizer",
+        },
+        prefill: {
+          email: SUPPORT_EMAIL,
+        },
+        theme: {
+          color: "#2563eb",
+        },
+        handler: async (response) => {
+          const paymentId = response && response.razorpay_payment_id ? response.razorpay_payment_id : "received";
+          setPaymentStatus("Payment successful. Activating Pro...");
+          trackActivity("razorpay_payment_success", paymentId);
+
+          try {
+            const result = window.api && typeof window.api.activatePaidLicense === "function"
+              ? await window.api.activatePaidLicense(response || {})
+              : { ok: false, error: "Activation bridge unavailable." };
+
+            if (result && result.ok) {
+              applyProState(true);
+              setPaymentStatus(`Pro activated. Razorpay Payment ID: ${paymentId}`);
+              setTimeout(() => {
+                togglePaymentModal(false);
+                toggleActivateModal(false);
+              }, 900);
+            } else {
+              setPaymentStatus(result && result.error ? result.error : "Payment received, but activation failed. Contact support with your payment ID.", true);
+            }
+          } catch (_) {
+            setPaymentStatus("Payment received, but activation failed. Contact support with your payment ID.", true);
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            setPaymentStatus("Payment cancelled. You can try again when ready.");
+            trackActivity("razorpay_payment_dismissed");
+          },
+        },
+      });
+
+      checkout.on("payment.failed", (response) => {
+        const reason = response && response.error && response.error.description ? response.error.description : "Payment failed.";
+        setPaymentStatus(reason, true);
+        trackActivity("razorpay_payment_failed");
+      });
+
+      checkout.open();
+      trackActivity("razorpay_checkout_open");
+    } catch (err) {
+      setPaymentStatus(err && err.message ? err.message : "Unable to open Razorpay Checkout.", true);
+    }
   }
 
   function togglePaymentModal(show) {
     if (!paymentModal) return;
     paymentModal.classList.toggle("visible", !!show);
     if (show) {
-      generatePaymentQr();
+      setPaymentStatus("Ready for secure card, UPI, wallet, and netbanking payment.");
       trackActivity("payment_modal_open");
-    } else if (qrcodeContainer) {
-      qrcodeContainer.textContent = "";
     }
   }
 
@@ -768,27 +841,8 @@
   if (buyKeyBtn) buyKeyBtn.addEventListener("click", () => togglePaymentModal(true));
   if (closePaymentBtn) closePaymentBtn.addEventListener("click", () => togglePaymentModal(false));
   if (paymentModal) paymentModal.addEventListener("click", (e) => { if (e.target === paymentModal) togglePaymentModal(false); });
-  if (upiDeepLinkBtn) upiDeepLinkBtn.addEventListener("click", () => {
-    trackActivity("upi_pay_clicked");
-    openExternalUrl(upiUrl);
-  });
-  if (paymentEmailBtn) paymentEmailBtn.addEventListener("click", () => openExternalUrl(proofEmailUrl));
-  if (paymentWhatsappBtn) paymentWhatsappBtn.addEventListener("click", () => openExternalUrl(SUPPORT_WHATSAPP_URL));
-  if (copyUpiIdBtn) copyUpiIdBtn.addEventListener("click", async () => {
-    const originalText = copyUpiIdBtn.textContent;
-    try {
-      await navigator.clipboard.writeText(SELLER_UPI_ID);
-      copyUpiIdBtn.textContent = "Copied";
-    } catch (_) {
-      copyUpiIdBtn.textContent = "Copy failed";
-    }
-    setTimeout(() => { copyUpiIdBtn.textContent = originalText; }, 1500);
-  });
-  window.addEventListener("resize", () => {
-    if (!paymentModal || !paymentModal.classList.contains("visible")) return;
-    clearTimeout(togglePaymentModal.resizeTimer);
-    togglePaymentModal.resizeTimer = setTimeout(generatePaymentQr, 180);
-  });
+  if (razorpayCheckoutBtn) razorpayCheckoutBtn.addEventListener("click", openRazorpayCheckout);
+  if (paymentEmailBtn) paymentEmailBtn.addEventListener("click", () => openExternalUrl(paymentSupportUrl));
   document.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;
     if (paymentModal && paymentModal.classList.contains("visible")) togglePaymentModal(false);
@@ -802,9 +856,6 @@
       licenseKeyInput.focus();
     }
   }
-
-  if (sellerUpiIdNotice) sellerUpiIdNotice.textContent = SELLER_UPI_ID;
-  if (sellerUpiIdDisplay) sellerUpiIdDisplay.textContent = SELLER_UPI_ID;
 
   if (activateBtn) activateBtn.addEventListener("click", async () => {
     const key = String(licenseKeyInput ? licenseKeyInput.value : "").trim();

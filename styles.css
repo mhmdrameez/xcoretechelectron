@@ -552,22 +552,8 @@ body.busy .busyOverlay { display: flex; }
   border-color: var(--border-hover);
 }
 
-.sellerNotice {
-  margin: 18px 20px 14px;
-  color: var(--accent-primary);
-  font-size: 13px;
-  line-height: 1.5;
-  text-align: center;
-}
-
-.sellerNotice strong {
-  display: block;
-  color: var(--text-main);
-  overflow-wrap: anywhere;
-}
-
 .paymentPanel,
-.proofPanel {
+.paymentStatusPanel {
   margin: 0 20px 14px;
   padding: 16px;
   background: var(--bg-panel-alt);
@@ -582,42 +568,9 @@ body.busy .busyOverlay { display: flex; }
   margin-bottom: 12px;
 }
 
-.paymentDetail span,
 .amountRow span {
   color: var(--text-muted);
   font-size: 12px;
-}
-
-.upiCopyRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin: 6px 0 12px;
-}
-
-.upiCopyRow strong {
-  color: #67e8f9;
-  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-  font-size: 13px;
-  overflow-wrap: anywhere;
-  min-width: 0;
-}
-
-.copyBtn {
-  flex: 0 0 auto;
-  border: 1px solid var(--border-main);
-  border-radius: var(--radius-sm);
-  background: #263142;
-  color: var(--text-main);
-  cursor: pointer;
-  font-size: 11px;
-  font-weight: 700;
-  padding: 6px 10px;
-}
-
-.copyBtn:hover {
-  background: #334155;
 }
 
 .amountRow {
@@ -638,44 +591,34 @@ body.busy .busyOverlay { display: flex; }
   line-height: 1.45;
 }
 
-.qrWrap {
-  display: flex;
-  justify-content: center;
-  margin: 8px 20px 16px;
-}
-
-.qrBox {
-  min-width: 164px;
-  min-height: 164px;
-  padding: 10px;
-  background: #fff;
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.qrBox img {
-  display: block;
-  max-width: 164px;
-  max-height: 164px;
-}
-
-.upiPayBtn {
+.razorpayPayBtn {
   width: calc(100% - 40px);
   margin: 0 20px 14px;
-  background: #16a34a;
+  background: #2563eb;
   color: #fff;
   border-color: transparent;
 }
 
-.upiPayBtn:hover {
-  background: #15803d;
+.razorpayPayBtn:hover {
+  background: #1d4ed8;
 }
 
-.proofPanel {
+.paymentStatusPanel {
   background: rgba(59, 130, 246, 0.08);
   text-align: center;
+}
+
+.paymentStatusText {
+  min-height: 38px;
+  color: var(--text-dim);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.45;
+  margin-bottom: 12px;
+}
+
+.paymentStatusText.error {
+  color: var(--accent-danger);
 }
 
 .proofBtn {
@@ -700,15 +643,6 @@ body.busy .busyOverlay { display: flex; }
   background: #1e293b;
 }
 
-.whatsappBtn {
-  background: #16a34a;
-  border-color: rgba(255,255,255,0.08);
-}
-
-.whatsappBtn:hover {
-  background: #15803d;
-}
-
 @media (max-width: 520px) {
   .paymentModal {
     align-items: flex-start;
@@ -716,10 +650,8 @@ body.busy .busyOverlay { display: flex; }
   }
 
   .paymentHeader,
-  .sellerNotice,
   .paymentPanel,
-  .proofPanel,
-  .qrWrap {
+  .paymentStatusPanel {
     margin-left: 14px;
     margin-right: 14px;
   }
@@ -729,16 +661,12 @@ body.busy .busyOverlay { display: flex; }
     padding-right: 14px;
   }
 
-  .upiPayBtn {
+  .razorpayPayBtn {
     width: calc(100% - 28px);
     margin-left: 14px;
     margin-right: 14px;
   }
 
-  .upiCopyRow {
-    align-items: flex-start;
-    flex-direction: column;
-  }
 }
 
 .hidden { display: none !important; }

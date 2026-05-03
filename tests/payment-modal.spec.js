@@ -36,30 +36,40 @@ test.describe('Payment Modal', () => {
     await expect(window.locator('#paymentModal')).toHaveClass(/visible/);
   });
 
-  test('shows seller UPI ID in both seller notice and copy row', async () => {
+  test('shows Razorpay checkout details', async () => {
     await openPaymentModal();
-    await expect(window.locator('#sellerUpiIdNotice')).toHaveText('muhammedrameez2000-7@okaxis');
-    await expect(window.locator('#sellerUpiIdDisplay')).toHaveText('muhammedrameez2000-7@okaxis');
+    await expect(window.locator('.paymentPanelTitle')).toHaveText('Secure Razorpay Checkout');
+    await expect(window.locator('.paymentPanel')).toContainText('XCoreTech Lifetime Pro');
   });
 
   test('shows the exact lifetime amount', async () => {
     await openPaymentModal();
-    await expect(window.locator('.amountRow')).toContainText('₹399.00 INR');
+    await expect(window.locator('.amountRow').first()).toContainText('₹399.00 INR');
   });
 
-  test('renders a QR code image for the UPI payment URI', async () => {
+  test('opens Razorpay checkout with the lifetime payment options', async () => {
     await openPaymentModal();
-    const qr = window.locator('#qrcodeContainer img');
-    await expect(qr).toBeVisible({ timeout: 10000 });
-    await expect(qr).toHaveAttribute('alt', 'UPI payment QR code');
-    await expect(qr).toHaveAttribute('src', /api\.qrserver\.com/);
+    await window.locator('#razorpayCheckoutBtn').click();
+    const state = await window.evaluate(() => ({
+      opened: window.__razorpayOpened,
+      options: window.__razorpayOptions,
+    }));
+    expect(state.opened).toBe(true);
+    expect(state.options.key).toBe('rzp_test_PLAYWRIGHT12345');
+    expect(state.options.amount).toBe(39900);
+    expect(state.options.currency).toBe('INR');
+    expect(state.options.name).toBe('XCoreTech Software');
   });
 
-  test('copy UPI button gives immediate user feedback', async () => {
+  test('successful Razorpay callback activates Pro state', async () => {
     await openPaymentModal();
-    const copyButton = window.locator('#copyUpiId');
-    await copyButton.click();
-    await expect(copyButton).toHaveText(/Copied|Copy failed/);
+    await window.locator('#razorpayCheckoutBtn').click();
+    await window.evaluate(() => window.__razorpayOptions.handler({ razorpay_payment_id: 'pay_PLAYWRIGHT12345' }));
+    await expect(window.locator('#proBadge')).toHaveText('PRO');
+
+    const activations = await window.evaluate(() => window.__paidLicenseActivations);
+    expect(activations).toHaveLength(1);
+    expect(activations[0].razorpay_payment_id).toBe('pay_PLAYWRIGHT12345');
   });
 
   test('close button closes only the payment modal', async () => {
@@ -81,24 +91,19 @@ test.describe('Payment Modal', () => {
     await expect(window.locator('#paymentModal')).not.toHaveClass(/visible/);
   });
 
-  test('payment proof actions are visible and labeled clearly', async () => {
+  test('payment support action is visible and labeled clearly', async () => {
     await openPaymentModal();
-    await expect(window.locator('#paymentEmailBtn')).toHaveText('Email: xcoretech@yahoo.com');
-    await expect(window.locator('#paymentWhatsappBtn')).toHaveText('WhatsApp Business: +91 9446960834');
+    await expect(window.locator('#paymentEmailBtn')).toHaveText('Contact Support: xcoretech@yahoo.com');
   });
 
-  test('UPI, email, and WhatsApp buttons call the external-link bridge', async () => {
+  test('support button calls the external-link bridge', async () => {
     await openPaymentModal();
 
-    await window.locator('#upiDeepLinkBtn').click();
     await window.locator('#paymentEmailBtn').click();
-    await window.locator('#paymentWhatsappBtn').click();
 
     const links = await window.evaluate(() => window.__openedExternalLinks);
-    expect(links).toHaveLength(3);
-    expect(links[0]).toContain('upi://pay');
-    expect(links[0]).toContain('pa=muhammedrameez2000-7%40okaxis');
-    expect(links[1]).toContain('mailto:xcoretech@yahoo.com');
-    expect(links[2]).toBe('https://wa.me/919446960834');
+    expect(links).toHaveLength(1);
+    expect(links[0]).toContain('mailto:xcoretech@yahoo.com');
+    expect(links[0]).toContain('Razorpay');
   });
 });

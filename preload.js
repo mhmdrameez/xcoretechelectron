@@ -24,6 +24,7 @@ contextBridge.exposeInMainWorld("api", {
   getSystemInfo:      ()            => ipcRenderer.invoke("system:get"),
   getLicense:         ()            => ipcRenderer.invoke("license:get"),
   verifyLicense:      (k)           => ipcRenderer.invoke("license:verify", k),
+  activatePaidLicense:(payment)     => ipcRenderer.invoke("license:activatePaid", payment || {}),
   getCounts:          ()            => ipcRenderer.invoke("analytics:getCounts"),
   trackEvent:         (p)           => ipcRenderer.invoke("analytics:track", p || {}),
   openExternal:       (url)         => ipcRenderer.invoke("app:openExternal", url),

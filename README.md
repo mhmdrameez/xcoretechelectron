@@ -18,7 +18,7 @@
 - **⚡ Fast Parallel Scanning** — Bounded worker-pool directory walk (6 concurrent workers), Dirent-based stat calls, batch I/O to minimize disk latency.
 - **🗑️ Safe Deletion Pipeline** — Cascading fallback: `unlink` → attribute-strip → `shell del` → reboot-schedule.
 - **🔒 Pro Licensing** — Online key verification with hardware-bound device linking.
-- **💳 Built-in Pro Purchase Flow** — ₹399 lifetime UPI checkout with QR code, copy-to-clipboard UPI ID, email proof, and WhatsApp Business proof actions.
+- **💳 Built-in Pro Purchase Flow** — ₹399 lifetime Razorpay checkout for card, UPI, wallet, and netbanking payments.
 - **🤖 Autonomous Background Maintenance (PRO)** — Fully silent maintenance cycles triggered on system boot, including auto-scan and auto-clean.
 - **Free Startup Visibility** - Free installs open the full app on Windows startup and never run automatic cleaning; Pro installs stay silent and auto-clean in the background.
 - **⚡ Windows Startup Manifest (PRO)** — Manage and optimize programs that launch on system boot to accelerate load times, with locked-state UI protection for Free users.
@@ -68,7 +68,7 @@ XCoreTech PC Optimizer uses a **high-security online activation system**.
 4. Upon successful verification, all premium features (Auto-Clean, Startup Manifest) are unlocked immediately.
 
 ### Buying a License
-Users can open the purchase flow from the activation modal. The payment modal shows the ₹399 lifetime amount, seller UPI ID, generated UPI QR code, and proof submission actions for email and WhatsApp Business.
+Users can open the purchase flow from the activation modal. The payment modal shows the ₹399 lifetime amount and launches Razorpay Standard Checkout. On a successful checkout callback, the app stores the Razorpay payment id in the encrypted local license file and unlocks Pro immediately. Set `RAZORPAY_KEY_ID` in `renderer.js` to your Razorpay live key id before releasing a production build.
 
 ### Startup License Behavior
 On boot, Free users open the full application window and the cleaner pipeline is never executed automatically. Pro users launch silently from Windows Startup and run the auto-scan and auto-clean maintenance flow in the background.
@@ -176,7 +176,7 @@ npm test
 ### Test Coverage
 - **Core Features**: Validates parallel scanning engines and safely verifies the cleaning pipeline.
 - **Dashboard Features**: Verifies System Information data retrieval and Windows Auto Start registry toggles.
-- **Activation and Payment Modals**: Verifies Pro activation UI, locked controls, UPI payment QR rendering, seller details, and proof action links.
+- **Activation and Payment Modals**: Verifies Pro activation UI, locked controls, Razorpay checkout launch options, and support action links.
 - **Startup License Behavior**: Verifies Free boot launches open the app without auto-cleaning, while Pro boot launches remain silent for auto-clean.
 - **IPC-Driven UI**: Verifies renderer reactions to mocked status, scan, clean, stats, technician, and update events.
 - **Static Contracts**: Verifies package scripts, Electron entry point, preload bridge, external-link protocol allowlist, payment constants, and local script loading.
