@@ -587,10 +587,48 @@
     if (startupStatusEl) startupStatusEl.textContent = msg || "";
   }
 
+  function startupOverlayNode() {
+    return document.getElementById("startupOverlay");
+  }
+
+  function ensureStartupOverlay() {
+    if (!startupListEl) return null;
+    let overlay = startupOverlayNode();
+    if (!overlay) {
+      overlay = document.createElement("div");
+      overlay.id = "startupOverlay";
+      overlay.className = "lockOverlay";
+      overlay.innerHTML = "<div class=\"lockCard\"><span style=\"font-size: 24px; margin-bottom: 12px;\">🔒</span><div style=\"font-weight: 700; margin-bottom: 4px;\">Pro Feature Locked</div><div style=\"font-size: 11px; color: var(--text-muted);\">Activate Pro to manage startup programs.</div></div>";
+    }
+    if (autoStartContainer && !autoStartContainer.classList.contains("proLockedFeature")) {
+      overlay.classList.add("hidden");
+    } else {
+      overlay.classList.remove("hidden");
+    }
+    if (overlay.parentElement !== startupListEl) startupListEl.prepend(overlay);
+    return overlay;
+  }
+
+  function replaceStartupContent(node) {
+    if (!startupListEl) return;
+    const overlay = ensureStartupOverlay();
+    Array.from(startupListEl.children).forEach((child) => {
+      if (child !== overlay) child.remove();
+    });
+    if (node) startupListEl.appendChild(node);
+  }
+
+  function setStartupMessage(message) {
+    const node = document.createElement("div");
+    node.className = "startupEmpty";
+    node.textContent = message;
+    replaceStartupContent(node);
+  }
+
   function renderStartupList() {
     if (!startupListEl) return;
     if (!startupItems.length) {
-      startupListEl.innerHTML = "<div class=\"startupEmpty\">No startup programs found.</div>";
+      setStartupMessage("No startup programs found.");
       return;
     }
     const frag = document.createDocumentFragment();
@@ -682,15 +720,14 @@
 
       frag.appendChild(row);
     }
-    startupListEl.textContent = "";
-    startupListEl.appendChild(frag);
+    replaceStartupContent(frag);
   }
 
   async function loadStartupPrograms() {
     if (startupLoading) return;
     startupLoading = true;
     setStartupStatus("Loading startup programs…");
-    if (startupListEl) startupListEl.innerHTML = "<div class=\"startupEmpty\">Loading…</div>";
+    if (startupListEl) setStartupMessage("Loading…");
     try {
       const r = await window.api.getStartupList();
       if (r && r.ok) {
@@ -699,11 +736,11 @@
         setStartupStatus(`${startupItems.length} startup program(s) found.`);
       } else {
         startupItems = [];
-        if (startupListEl) startupListEl.innerHTML = "<div class=\"startupEmpty\">Failed to load startup programs.</div>";
+        if (startupListEl) setStartupMessage("Failed to load startup programs.");
         setStartupStatus(r && r.error ? `Error: ${r.error}` : "Failed to load.");
       }
     } catch (err) {
-      if (startupListEl) startupListEl.innerHTML = "<div class=\"startupEmpty\">Error loading startup programs.</div>";
+      if (startupListEl) setStartupMessage("Error loading startup programs.");
       setStartupStatus(`Error: ${err && err.message ? err.message : String(err)}`);
     } finally {
       startupLoading = false;

@@ -1,5 +1,6 @@
 "use strict";
 const fs   = require("fs");
+const os   = require("os");
 const path = require("path");
 
 // ─── constants ────────────────────────────────────────────────────────────────
@@ -118,6 +119,16 @@ async function scanPaths(targetPaths, { cancel, onProgress, onLog }) {
 
 // ─── default targets ───────────────────────────────────────────────────────────
 function getDefaultTargets() {
+  if (process.env.PLAYWRIGHT_TEST) {
+    const fixture = path.join(os.tmpdir(), "xcoretech-playwright-cleaner-fixture");
+    try {
+      fs.mkdirSync(path.join(fixture, "nested"), { recursive: true });
+      fs.writeFileSync(path.join(fixture, "junk-a.tmp"), "playwright cleaner fixture\n");
+      fs.writeFileSync(path.join(fixture, "nested", "junk-b.tmp"), "playwright cleaner fixture\n");
+    } catch (_) {}
+    return [fixture];
+  }
+
   const temp  = envPath("TEMP") || envPath("TMP");
   const local = envPath("LOCALAPPDATA");
   const win   = envPath("WINDIR") || "C:\\Windows";
