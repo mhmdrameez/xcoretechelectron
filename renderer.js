@@ -106,6 +106,14 @@
       listNoteEl.textContent = `Showing first ${MAX_LIST_ROWS}. ${p.totalFiles - MAX_LIST_ROWS} more…`;
   }
 
+  function cancelPendingProgressPaint() {
+    pendingProgress = null;
+    if (rafId) {
+      try { cancelAnimationFrame(rafId); } catch (_) {}
+      rafId = 0;
+    }
+  }
+
   // ── formatting helpers ─────────────────────────────────────────────────────
   const UNITS = ["B", "KB", "MB", "GB", "TB"];
   function formatBytes(bytes) {
@@ -476,6 +484,7 @@
   window.api.onScanProgress(schedulePaint);
 
   window.api.onScanDone((p) => {
+    cancelPendingProgressPaint();
     scanning = false;
     if (p && p.ok) {
       setTotals(p.totalFiles, p.totalBytes);

@@ -1,6 +1,6 @@
 {
   "name": "xcoretech-disk-cleaner",
-  "version": "1.3.19",
+  "version": "1.3.22",
   "description": "Advanced PC optimizer and cleaner built with Electron",
   "main": "index.js",
   "author": "XCoreTech Team",
@@ -13,7 +13,8 @@
     "dist": "electron-builder",
     "prerelease": "node pre-dist.js",
     "release": "electron-builder --publish always",
-    "test": "playwright test"
+    "test": "playwright test",
+    "test:stress": "playwright test tests/stress.spec.js"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",
