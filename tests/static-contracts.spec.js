@@ -24,7 +24,6 @@ test.describe('Static App Contracts', () => {
       'renderer.js',
       'preload.js',
       'main.js',
-      'engagement.js',
     ]));
   });
 
@@ -71,36 +70,37 @@ test.describe('Static App Contracts', () => {
     expect(css).toContain('@media (max-width: 520px)');
   });
 
-  test('free boot background mode shows a daily Pro reminder instead of auto-cleaning', () => {
+  test('free boot startup opens the app instead of notifying or auto-cleaning', () => {
     const main = read('main.js');
-    expect(main).toContain('showFreeProReminder("boot_background_free")');
-    expect(main).toContain('Background mode active. Auto-clean is a Pro feature.');
-    expect(main).toContain('Notification.isSupported');
-    expect(main).toContain('markFreeProReminderShown');
+    expect(main).toContain('Startup launch opened. Auto-clean is a Pro feature.');
+    expect(main).toContain('showMainWindow();');
+    expect(main).not.toContain('showFreeProReminder');
+    expect(main).not.toContain('Notification.isSupported');
+    expect(main).not.toContain('markFreeProReminderShown');
 
     const freeBranch = main.slice(
-      main.indexOf('sendStatus("Background mode active. Auto-clean is a Pro feature.")'),
+      main.indexOf('sendStatus("Startup launch opened. Auto-clean is a Pro feature.")'),
       main.indexOf('} else if (isHidden && !licenseState.isPro)')
     );
     expect(freeBranch).not.toContain('runAutoClean');
     expect(freeBranch).not.toContain('cleaner().cleanFiles');
   });
 
-  test('boot auto-clean launches stay hidden', () => {
+  test('boot auto-clean launches stay hidden for Pro only', () => {
     const main = read('main.js');
     const utils = read('utils.js');
 
     expect(utils).toContain('--autoclean --hidden');
     expect(main).toContain('function isBackgroundLaunch');
     expect(main).toContain('hasProcessArg(argv, "--hidden") || hasProcessArg(argv, "--autoclean")');
-    expect(main).toContain('const shouldStayHidden = isBackgroundLaunch()');
+    expect(main).toContain('const shouldStayHidden = licenseState.isPro && isBackgroundLaunch()');
     expect(main).toContain('if (mainWindow && !shouldStayHidden) mainWindow.show()');
 
     const secondInstanceBranch = main.slice(
       main.indexOf('app.on("second-instance"'),
       main.indexOf('app.whenReady().then')
     );
-    expect(secondInstanceBranch).toContain('if (isBackgroundLaunch(argv))');
+    expect(secondInstanceBranch).toContain('if (licenseState.isPro && isBackgroundLaunch(argv))');
     expect(secondInstanceBranch.indexOf('return;')).toBeLessThan(secondInstanceBranch.indexOf('showMainWindow();'));
   });
 

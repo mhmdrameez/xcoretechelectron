@@ -167,7 +167,7 @@ test.describe('Stress and Low Resource Coverage', () => {
       });
       const window = await electronApp.firstWindow();
       await expect(window.locator('#app')).toBeVisible({ timeout: 10000 });
-      await expect(window.locator('#statusText')).toHaveText(/Idle\.|Checking for updates|Background mode active/, { timeout: 15000 });
+      await expect(window.locator('#statusText')).toHaveText(/Idle\.|Checking for updates/, { timeout: 15000 });
     } finally {
       if (electronApp) await electronApp.close();
     }

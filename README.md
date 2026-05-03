@@ -20,7 +20,7 @@
 - **🔒 Pro Licensing** — Online key verification with hardware-bound device linking.
 - **💳 Built-in Pro Purchase Flow** — ₹399 lifetime UPI checkout with QR code, copy-to-clipboard UPI ID, email proof, and WhatsApp Business proof actions.
 - **🤖 Autonomous Background Maintenance (PRO)** — Fully silent maintenance cycles triggered on system boot, including auto-scan and auto-clean.
-- **🔔 Free Background Reminder Mode** — Free installs can launch quietly on boot without cleaning anything, then show a once-daily Windows notification explaining the Pro auto-clean benefit.
+- **Free Startup Visibility** - Free installs open the full app on Windows startup and never run automatic cleaning; Pro installs stay silent and auto-clean in the background.
 - **⚡ Windows Startup Manifest (PRO)** — Manage and optimize programs that launch on system boot to accelerate load times, with locked-state UI protection for Free users.
 - **🛡️ No Administrator Required** — Runs entirely at the user level (`asInvoker`). No UAC prompts required.
 - **📍 Persistent System Tray** — Minimizes to the system tray for constant availability.
@@ -42,7 +42,6 @@ xcoretechelectron/
 ├── renderer.js       # UI logic — Stateless Vanilla JS rendering
 ├── scanner.js        # Parallel directory walker
 ├── cleaner.js        # Deletion pipeline
-├── engagement.js     # Free-user reminder cadence logic
 ├── analytics.js      # Tracking engine
 ├── updater.js        # Silent auto-updater
 ├── technician.js     # Pro technician tools
@@ -71,8 +70,8 @@ XCoreTech PC Optimizer uses a **high-security online activation system**.
 ### Buying a License
 Users can open the purchase flow from the activation modal. The payment modal shows the ₹399 lifetime amount, seller UPI ID, generated UPI QR code, and proof submission actions for email and WhatsApp Business.
 
-### Free Background Behavior
-On boot, Free users may run in hidden background mode, but the cleaner pipeline is never executed without Pro. Instead, the app shows at most one Windows notification per local day that presents Pro as an automatic maintenance upgrade. The reminder is intentionally capped so it stays helpful instead of noisy.
+### Startup License Behavior
+On boot, Free users open the full application window and the cleaner pipeline is never executed automatically. Pro users launch silently from Windows Startup and run the auto-scan and auto-clean maintenance flow in the background.
 
 ---
 
@@ -152,7 +151,7 @@ Electron includes runtime DLLs such as `ffmpeg.dll`, `libEGL.dll`, `libGLESv2.dl
 | Encryption | Hardware-bound `safeStorage` for local persistence |
 | Transport | Encrypted HTTPS communication with the license REST API |
 | Tests | `PLAYWRIGHT_TEST=1` uses a small temp scan fixture so clean tests stay deterministic and avoid real user cache cleanup |
-| Notifications | Free boot reminders are capped to one per local day with an additional 20-hour cooldown |
+| Startup behavior | Free boot launches open the app; Pro boot launches stay hidden and run auto-clean |
 
 ---
 
@@ -178,7 +177,7 @@ npm test
 - **Core Features**: Validates parallel scanning engines and safely verifies the cleaning pipeline.
 - **Dashboard Features**: Verifies System Information data retrieval and Windows Auto Start registry toggles.
 - **Activation and Payment Modals**: Verifies Pro activation UI, locked controls, UPI payment QR rendering, seller details, and proof action links.
-- **Free Background Reminders**: Verifies the daily notification cadence and the Free boot branch never invokes auto-clean.
+- **Startup License Behavior**: Verifies Free boot launches open the app without auto-cleaning, while Pro boot launches remain silent for auto-clean.
 - **IPC-Driven UI**: Verifies renderer reactions to mocked status, scan, clean, stats, technician, and update events.
 - **Static Contracts**: Verifies package scripts, Electron entry point, preload bridge, external-link protocol allowlist, payment constants, and local script loading.
 - **Technician Mode (PRO)**: Mocks the PRO environment dynamically (`PLAYWRIGHT_TEST=1`) to automatically test the RAM Boost, Auto Fix, and Internet Fix (piping backend CMD operations straight into the test logs).

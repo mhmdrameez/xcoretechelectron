@@ -36,7 +36,7 @@ try {
   _a.commandLine.appendSwitch("v", "0");
 } catch (_) {}
 
-const { app, BrowserWindow, ipcMain, dialog, Tray, Menu, nativeImage, shell, Notification } = require("electron");
+const { app, BrowserWindow, ipcMain, dialog, Tray, Menu, nativeImage, shell } = require("electron");
 const fs   = require("fs");
 const { exec }  = require("child_process");
 const path = require("path");
@@ -57,7 +57,6 @@ const { initAnalytics, sendEvent, getUserCounts } = require(path.join(__dirname,
 const { installCrashHandler }  = require(path.join(__dirname, "crashHandler.js"));
 const { primeLocation, getLocation } = require(path.join(__dirname, "location.js"));
 const { getAutoStartEnabled, setAutoStartEnabled, formatBytes, debounceMs } = require(path.join(__dirname, "utils.js"));
-const { shouldShowFreeProReminder, markFreeProReminderShown } = require(path.join(__dirname, "engagement.js"));
 
 installCrashHandler(sendEvent);
 
@@ -89,7 +88,6 @@ function isAutoCleanLaunch(argv = process.argv) {
 // ── persistence ───────────────────────────────────────────────────────────────
 const statsPath   = path.join(app.getPath("userData"), "stats.json");
 const licensePath = path.join(app.getPath("userData"), "license", "identity.bin");
-const engagementPath = path.join(app.getPath("userData"), "engagement.json");
 
 function loadJson(p, def) {
   try {
@@ -107,7 +105,6 @@ function saveJson(p, data) {
 }
 
 const cleanStats = loadJson(statsPath, { totalRuns: 0, totalDeletedItems: 0, totalBytesFreed: 0, totalDurationMs: 0, lastRunAt: null });
-const engagementState = loadJson(engagementPath, { lastFreeProReminderDate: "", lastFreeProReminderAt: 0 });
 
 // ── high-encryption license persistence ───────────────────────────────────────
 function loadLicense() {
@@ -309,40 +306,6 @@ function createTray() {
   } catch (_) { tray = null; }
 }
 
-function showFreeProReminder(reason) {
-  if (licenseState.isPro) return false;
-  if (!shouldShowFreeProReminder(engagementState)) return false;
-
-  Object.assign(engagementState, markFreeProReminderShown(engagementState));
-  saveJson(engagementPath, engagementState);
-
-  const title = "Keep your PC clean automatically";
-  const body = "XCoreTech is running quietly. Upgrade to Pro to unlock safe boot-time auto-clean and startup optimization.";
-
-  try {
-    if (Notification && Notification.isSupported()) {
-      const notice = new Notification({
-        title,
-        body,
-        silent: false,
-        icon: resolveIconPath(),
-      });
-      notice.on("click", () => {
-        showMainWindow();
-        sendStatus("Pro unlocks automatic background cleaning on startup.");
-      });
-      notice.show();
-    } else {
-      sendStatus(`${title}: ${body}`);
-    }
-  } catch (_) {
-    sendStatus(`${title}: ${body}`);
-  }
-
-  sendEvent("activity", { name: "Free User Reminder", junk: reason || "daily_pro_reminder" }, { force: true, immediate: true });
-  return true;
-}
-
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 820, height: 620, minWidth: 760, minHeight: 520,
@@ -366,7 +329,7 @@ function createWindow() {
   mainWindow.setMenuBarVisibility(false);
   mainWindow.loadFile(path.join(__dirname, "index.html"));
 
-  const shouldStayHidden = isBackgroundLaunch();
+  const shouldStayHidden = licenseState.isPro && isBackgroundLaunch();
   mainWindow.once("ready-to-show", () => {
     if (mainWindow && !shouldStayHidden) mainWindow.show();
   });
@@ -906,7 +869,7 @@ if (!gotLock) {
 } else {
   app.on("second-instance", (_event, argv) => {
     try {
-      if (isBackgroundLaunch(argv)) {
+      if (licenseState.isPro && isBackgroundLaunch(argv)) {
         sendStatus("Running in background. Click tray icon to reopen.");
         return;
       }
@@ -933,8 +896,8 @@ if (!gotLock) {
     createTray();
     setupIpc();
 
-    // Keep background startup available for all users.
-    // Pro users can auto-clean; Free users only receive a daily upgrade reminder.
+    // Keep startup enabled for all users. Pro launches stay hidden and auto-clean;
+    // Free launches open normally so customers see the app and no cleaning runs.
     setTimeout(async () => {
       try {
         await setAutoStartEnabled(AUTO_START_NAME, true);
@@ -971,15 +934,12 @@ if (!gotLock) {
           runAutoClean({ sendStatus, send });
         }, 12000); // 12s delay for background runs
       } else {
-        sendStatus("Background mode active. Auto-clean is a Pro feature.");
-        setTimeout(() => {
-          showFreeProReminder("boot_background_free");
-        }, 12000);
+        sendStatus("Startup launch opened. Auto-clean is a Pro feature.");
+        showMainWindow();
       }
     } else if (isHidden && !licenseState.isPro) {
-      setTimeout(() => {
-        showFreeProReminder("hidden_background_free");
-      }, 12000);
+      sendStatus("Startup launch opened. Auto-clean is a Pro feature.");
+      showMainWindow();
     }
   });
 
