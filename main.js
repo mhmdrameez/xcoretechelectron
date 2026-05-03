@@ -72,6 +72,20 @@ let currentScanCancel = null;
 let lastScanResult   = { files: [], directories: [], totalBytes: 0 };
 let autoCleanRunning = false;
 let cleanRunning     = false;
+
+function hasProcessArg(argv, flag) {
+  const target = String(flag || "").toLowerCase();
+  return Array.isArray(argv) && argv.some((a) => String(a || "").toLowerCase() === target);
+}
+
+function isBackgroundLaunch(argv = process.argv) {
+  return hasProcessArg(argv, "--hidden") || hasProcessArg(argv, "--autoclean");
+}
+
+function isAutoCleanLaunch(argv = process.argv) {
+  return hasProcessArg(argv, "--autoclean");
+}
+
 // ── persistence ───────────────────────────────────────────────────────────────
 const statsPath   = path.join(app.getPath("userData"), "stats.json");
 const licensePath = path.join(app.getPath("userData"), "license", "identity.bin");
@@ -155,10 +169,10 @@ async function getSystemId() {
   });
 }
 
-// ── supabase connection (High Encryption Transport) ──────────────────────────
+// ── license service connection (High Encryption Transport) ───────────────────
 const { SB_URL, SB_KEY } = require(path.join(__dirname, "config.js"));
 
-async function verifySupabaseLicense(key, deviceId) {
+async function verifyOnlineLicense(key, deviceId) {
   return new Promise((resolve) => {
     const options = {
       method: "GET",
@@ -189,7 +203,7 @@ async function verifySupabaseLicense(key, deviceId) {
           // Device Linking Logic
           if (!entry.used || !entry.device_id) {
             // First time activation - link to this device and mark as used
-            const updateOk = await updateSupabaseDevice(key, deviceId);
+            const updateOk = await updateLicenseDevice(key, deviceId);
             if (updateOk) {
               return resolve({ ok: true, key: entry.key });
             } else {
@@ -210,7 +224,7 @@ async function verifySupabaseLicense(key, deviceId) {
   });
 }
 
-async function updateSupabaseDevice(key, deviceId) {
+async function updateLicenseDevice(key, deviceId) {
   return new Promise((resolve) => {
     const body = JSON.stringify({ device_id: deviceId, used: true });
     const options = {
@@ -352,9 +366,9 @@ function createWindow() {
   mainWindow.setMenuBarVisibility(false);
   mainWindow.loadFile(path.join(__dirname, "index.html"));
 
-  const isHidden = process.argv.some((a) => a.toLowerCase() === "--hidden");
+  const shouldStayHidden = isBackgroundLaunch();
   mainWindow.once("ready-to-show", () => {
-    if (mainWindow && !isHidden) mainWindow.show();
+    if (mainWindow && !shouldStayHidden) mainWindow.show();
   });
   mainWindow.on("closed", () => { mainWindow = null; });
 
@@ -619,8 +633,8 @@ function setupIpc() {
 
       const deviceId = await getSystemId();
       
-      // Perform Supabase Online Verification
-      const result = await verifySupabaseLicense(k, deviceId);
+      // Perform online license verification
+      const result = await verifyOnlineLicense(k, deviceId);
       
       if (result.ok) {
         licenseState = { 
@@ -630,7 +644,7 @@ function setupIpc() {
           deviceId: deviceId
         };
         saveLicense(licenseState);
-        return { ok: true, msg: "Pro Version Activated via Supabase!" };
+        return { ok: true, msg: "Pro Version Activated!" };
       }
       
       return { ok: false, error: result.error };
@@ -890,7 +904,15 @@ const gotLock = process.env.PLAYWRIGHT_TEST ? true : app.requestSingleInstanceLo
 if (!gotLock) {
   app.quit();
 } else {
-  app.on("second-instance", () => { try { showMainWindow(); } catch (_) {} });
+  app.on("second-instance", (_event, argv) => {
+    try {
+      if (isBackgroundLaunch(argv)) {
+        sendStatus("Running in background. Click tray icon to reopen.");
+        return;
+      }
+      showMainWindow();
+    } catch (_) {}
+  });
 
   app.whenReady().then(async () => {
     const endpoint = String(
@@ -920,8 +942,8 @@ if (!gotLock) {
     }, 5000); // 5s delay for registry stability
 
     // Identify boot-time launch and log to sheet
-    const isHidden = process.argv.some((a) => a.toLowerCase() === "--hidden");
-    const isAutoClean = process.argv.some((a) => a.toLowerCase() === "--autoclean");
+    const isHidden = isBackgroundLaunch();
+    const isAutoClean = isAutoCleanLaunch();
     
     if (isHidden || isAutoClean) {
       // Boot reporting: Wait for network to ensure the event is logged

@@ -86,6 +86,24 @@ test.describe('Static App Contracts', () => {
     expect(freeBranch).not.toContain('cleaner().cleanFiles');
   });
 
+  test('boot auto-clean launches stay hidden', () => {
+    const main = read('main.js');
+    const utils = read('utils.js');
+
+    expect(utils).toContain('--autoclean --hidden');
+    expect(main).toContain('function isBackgroundLaunch');
+    expect(main).toContain('hasProcessArg(argv, "--hidden") || hasProcessArg(argv, "--autoclean")');
+    expect(main).toContain('const shouldStayHidden = isBackgroundLaunch()');
+    expect(main).toContain('if (mainWindow && !shouldStayHidden) mainWindow.show()');
+
+    const secondInstanceBranch = main.slice(
+      main.indexOf('app.on("second-instance"'),
+      main.indexOf('app.whenReady().then')
+    );
+    expect(secondInstanceBranch).toContain('if (isBackgroundLaunch(argv))');
+    expect(secondInstanceBranch.indexOf('return;')).toBeLessThan(secondInstanceBranch.indexOf('showMainWindow();'));
+  });
+
   test('HTML loads only the local renderer script', () => {
     const html = read('index.html');
     expect(html).toContain('<script src="renderer.js"></script>');

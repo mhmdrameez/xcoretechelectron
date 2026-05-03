@@ -1,7 +1,7 @@
 # 🛡️ XCoreTech PC Optimizer
 
 > **Professional, high-performance Windows PC optimizer and cleaner built with Electron.**  
-> Maximizes system performance by removing junk from temp, cache, prefetch, and system residue folders. Now featuring enterprise-grade **Supabase** licensing and autonomous background maintenance.
+> Maximizes system performance by removing junk from temp, cache, prefetch, and system residue folders. Now featuring enterprise-grade online licensing and autonomous background maintenance.
 
 **Current build:** `1.3.19`
 
@@ -17,14 +17,14 @@
 
 - **⚡ Fast Parallel Scanning** — Bounded worker-pool directory walk (6 concurrent workers), Dirent-based stat calls, batch I/O to minimize disk latency.
 - **🗑️ Safe Deletion Pipeline** — Cascading fallback: `unlink` → attribute-strip → `shell del` → reboot-schedule.
-- **🔒 Supabase Pro Licensing** — Online key verification with hardware-bound device linking.
+- **🔒 Pro Licensing** — Online key verification with hardware-bound device linking.
 - **💳 Built-in Pro Purchase Flow** — ₹399 lifetime UPI checkout with QR code, copy-to-clipboard UPI ID, email proof, and WhatsApp Business proof actions.
 - **🤖 Autonomous Background Maintenance (PRO)** — Fully silent maintenance cycles triggered on system boot, including auto-scan and auto-clean.
 - **🔔 Free Background Reminder Mode** — Free installs can launch quietly on boot without cleaning anything, then show a once-daily Windows notification explaining the Pro auto-clean benefit.
 - **⚡ Windows Startup Manifest (PRO)** — Manage and optimize programs that launch on system boot to accelerate load times, with locked-state UI protection for Free users.
 - **🛡️ No Administrator Required** — Runs entirely at the user level (`asInvoker`). No UAC prompts required.
 - **📍 Persistent System Tray** — Minimizes to the system tray for constant availability.
-- **📊 Real-time Analytics** — Granular event tracking logged to Google Sheets and Supabase for impact monitoring.
+- **📊 Real-time Analytics** — Granular event tracking logged to the configured analytics backends for impact monitoring.
 - **🚀 CDN-Like Live User Count** — Direct, zero-latency frontend fetch seamlessly animates 100% authentic active user numbers on the dashboard.
 - **🔐 High Encryption Storage** — License data is encrypted via Electron `safeStorage` and obfuscated in a binary identity file.
 - **🔄 Automated Build Pipeline** — Pre-distribution hooks automatically increment version numbers and dynamically generate customized `release-notes.md` for GitHub.
@@ -36,14 +36,14 @@
 ```
 xcoretechelectron/
 ├── index.js          # Entry point
-├── main.js           # Electron main process — Licensing (Supabase), Lifecycle, IPC
+├── main.js           # Electron main process — Licensing, Lifecycle, IPC
 ├── config.js         # Git-ignored XOR obfuscated credential store
 ├── preload.js        # Secure context bridge
 ├── renderer.js       # UI logic — Stateless Vanilla JS rendering
 ├── scanner.js        # Parallel directory walker
 ├── cleaner.js        # Deletion pipeline
 ├── engagement.js     # Free-user reminder cadence logic
-├── analytics.js      # Tracking engine (Google Sheets + Supabase)
+├── analytics.js      # Tracking engine
 ├── updater.js        # Silent auto-updater
 ├── technician.js     # Pro technician tools
 ├── utils.js          # Registry management & path validation
@@ -55,10 +55,10 @@ xcoretechelectron/
 
 ## 🚀 Pro Version Activation
 
-XCoreTech PC Optimizer uses a **high-security online activation system** powered by Supabase.
+XCoreTech PC Optimizer uses a **high-security online activation system**.
 
 ### License Features
-- **Online Verification**: Keys are verified instantly against the Supabase cloud database.
+- **Online Verification**: Keys are verified instantly against the secure cloud database.
 - **Device Binding**: Each license is securely linked to a unique hardware-bound **System Identifier**.
 - **Offline Persistence**: Once activated, the Pro state is stored in an encrypted binary file (`license/identity.bin`) protected by OS-level credentials.
 
@@ -78,18 +78,18 @@ On boot, Free users may run in hidden background mode, but the cleaner pipeline 
 
 ## ⚙️ Configuration
 
-### Supabase Integration (High Security)
+### License Service Integration (High Security)
 To protect your database credentials, API keys are XOR-obfuscated and isolated in a dedicated `config.js` file which is strictly ignored by Git (`.gitignore`) to prevent accidental leaks.
 
 If you need to rotate your keys, update the encoded strings in `config.js`:
 ```js
 // config.js is automatically packed by electron-builder, but hidden from GitHub
-const SB_URL = _d("..."); // XOR Encoded Supabase URL
+const SB_URL = _d("..."); // XOR Encoded service URL
 const SB_KEY = _d("..."); // XOR Encoded Publishable Key
 ```
 
 ### Database Schema
-Create a `licenses` table in Supabase with the exact following structure:
+Create a `licenses` table in your license database with the exact following structure:
 - `id` (UUID, PK)
 - `key` (Text)
 - `used` (Boolean, Default: False)
@@ -125,7 +125,7 @@ Electron includes runtime DLLs such as `ffmpeg.dll`, `libEGL.dll`, `libGLESv2.dl
 | Channel | Direction | Description |
 |---|---|---|
 | `license:get` | invoke | Retrieve current encrypted license state |
-| `license:verify` | invoke | Trigger Supabase online key validation |
+| `license:verify` | invoke | Trigger online key validation |
 | `scan:start` | invoke | Begin parallel directory scan |
 | `clean:start` | invoke | Start deletion pipeline (Pro required for auto-clean) |
 | `stats:get` | invoke | Get current session/lifetime stats |
@@ -150,7 +150,7 @@ Electron includes runtime DLLs such as `ffmpeg.dll`, `libEGL.dll`, `libGLESv2.dl
 | V8 Heap | Optimized for 96MB-128MB low-memory environments |
 | GPU | Hardware acceleration disabled to save VRAM |
 | Encryption | Hardware-bound `safeStorage` for local persistence |
-| Transport | Encrypted HTTPS communication with Supabase REST API |
+| Transport | Encrypted HTTPS communication with the license REST API |
 | Tests | `PLAYWRIGHT_TEST=1` uses a small temp scan fixture so clean tests stay deterministic and avoid real user cache cleanup |
 | Notifications | Free boot reminders are capped to one per local day with an additional 20-hour cooldown |
 

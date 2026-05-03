@@ -19,7 +19,7 @@ Here is a step-by-step manual testing guide:
 ## 3. Licensing & Pro Activation
 - `[ ]` **Test:** Click the **Activate Pro** button in the header.
 - `[ ]` **Expected:** A modal should appear. Entering an invalid key should display a red error message ("Verification failed" or "Key not found").
-- `[ ]` **Test:** Enter a valid Supabase license key.
+- `[ ]` **Test:** Enter a valid license key.
 - `[ ]` **Expected:** The modal should close, the "Activate Pro" button should disappear, and a green "PRO VERSION" badge should appear next to the logo.
 
 ## 4. Technician Mode (Pro Only)
