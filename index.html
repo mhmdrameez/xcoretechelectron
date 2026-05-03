@@ -110,6 +110,65 @@
         </div>
       </div>
     </section>
+    <!-- ── Technician Mode (Advanced Pro Tools) ── -->
+    <section class="card" id="technicianSection">
+      <div class="cardTitle" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span>🛠️</span> Technician Mode
+        </div>
+        <div id="techLockTag" class="lockTag">🔒 PRO FEATURE</div>
+      </div>
+
+      <div id="techOverlay" class="lockOverlay hidden">
+        <div class="lockCard">
+          <span style="font-size: 24px; margin-bottom: 12px;">🔒</span>
+          <div style="font-weight: 700; margin-bottom: 4px;">Technician Mode Locked</div>
+          <div style="font-size: 11px; color: var(--text-muted);">Activate Pro to unlock advanced system fixes.</div>
+        </div>
+      </div>
+
+      <div class="techGrid">
+        <div class="techTool">
+          <div class="techToolIcon">🌐</div>
+          <div class="techToolInfo">
+            <div class="techToolName">Internet Fix</div>
+            <div class="techToolDesc">Flush DNS, reset Winsock & IP stack.</div>
+            <div class="techToolProgress" id="techInternetProg" style="font-size:10px; color:var(--accent-secondary); margin-top:4px; height:12px;"></div>
+          </div>
+          <button id="techInternetBtn" class="btn ghostBtn techBtn">Run Fix</button>
+        </div>
+
+        <div class="techTool">
+          <div class="techToolIcon">🚀</div>
+          <div class="techToolInfo">
+            <div class="techToolName">RAM Boost</div>
+            <div class="techToolDesc">Optimizes memory usage for all apps.</div>
+            <div class="techToolProgress" id="techRamProg" style="font-size:10px; color:var(--accent-secondary); margin-top:4px; height:12px;"></div>
+          </div>
+          <button id="techRamBtn" class="btn ghostBtn techBtn">Optimize</button>
+        </div>
+
+        <div class="techTool">
+          <div class="techToolIcon">⚙️</div>
+          <div class="techToolInfo">
+            <div class="techToolName">Auto Fix</div>
+            <div class="techToolDesc">Fix common Windows Update & Spooler issues.</div>
+            <div class="techToolProgress" id="techAutoProg" style="font-size:10px; color:var(--accent-secondary); margin-top:4px; height:12px;"></div>
+          </div>
+          <button id="techAutoBtn" class="btn ghostBtn techBtn">Repair</button>
+        </div>
+
+        <div class="techTool fullService">
+          <div class="techToolIcon">⚡</div>
+          <div class="techToolInfo">
+            <div class="techToolName">FULL SERVICE</div>
+            <div class="techToolDesc">Execute all fixes in a single sequence.</div>
+            <div class="techToolProgress" id="techFullProg" style="font-size:10px; color:var(--accent-secondary); margin-top:4px; height:12px;"></div>
+          </div>
+          <button id="techFullBtn" class="btn primary techBtn">One-Click Fix</button>
+        </div>
+      </div>
+    </section>
 
     <!-- ── Startup Control Center (Always Visible) ── -->
     <section class="card" id="startupSection">

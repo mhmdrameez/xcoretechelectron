@@ -43,6 +43,13 @@
   const startupOverlay     = el("startupOverlay");
   const startupLockTag     = el("startupLockTag");
 
+  const techInternetBtn    = el("techInternetBtn");
+  const techRamBtn         = el("techRamBtn");
+  const techAutoBtn        = el("techAutoBtn");
+  const techFullBtn        = el("techFullBtn");
+  const techOverlay        = el("techOverlay");
+  const techLockTag        = el("techLockTag");
+
   // ── constants ──────────────────────────────────────────────────────────────
   const MAX_LIST_ROWS = 2000;
   const VISIBLE_ROWS  = 100;
@@ -152,6 +159,8 @@
       if (startupOverlay) startupOverlay.classList.add("hidden");
       if (startupLockTag) startupLockTag.style.display = "none";
       if (autoStartChk) autoStartChk.disabled = false;
+      if (techOverlay) techOverlay.classList.add("hidden");
+      if (techLockTag) techLockTag.style.display = "none";
     } else {
       if (proBadge) { proBadge.textContent = "FREE"; proBadge.className = "proBadge free"; }
       if (goProBtn) goProBtn.style.display = "flex";
@@ -159,6 +168,8 @@
       if (startupOverlay) startupOverlay.classList.remove("hidden");
       if (startupLockTag) startupLockTag.style.display = "inline-block";
       if (autoStartChk) autoStartChk.disabled = true;
+      if (techOverlay) techOverlay.classList.remove("hidden");
+      if (techLockTag) techLockTag.style.display = "inline-block";
     }
   }
   function updateImpactCards(s) {
@@ -313,7 +324,76 @@
     }
   });
 
+  // ── technician listeners ───────────────────────────────────────────────────
+  async function runTechTool(name, fn, progId) {
+    if (scanning || cleaning) return;
+    const progEl = el(progId);
+    setBusy(true, `${name} in progress…`);
+    setStatus(`Running ${name}…`);
+    if (progEl) { progEl.textContent = "Processing..."; progEl.style.color = "var(--accent-warning)"; }
+    trackActivity(`tech_${name.toLowerCase().replace(/ /g, "_")}_start`);
+    try {
+      const r = await fn();
+      if (r && r.ok) {
+        setStatus(`${name} complete.`);
+        if (progEl) { 
+          let msg = "✔ Completed";
+          if (name === "Internet Fix") msg = `✔ Reset ${r.successCount || 0}/${r.total || 5} network components`;
+          if (name === "RAM Boost") msg = `✔ Freed ${formatBytes(r.freedBytes || 0)} of RAM`;
+          if (name === "Auto Fix") msg = "✔ Services & Caches Repaired";
+          progEl.textContent = msg; 
+          progEl.style.color = "var(--accent-primary)"; 
+        }
+        trackActivity(`tech_${name.toLowerCase().replace(/ /g, "_")}_ok`);
+      } else {
+        setStatus(`${name} failed.`);
+        if (progEl) { progEl.textContent = "✖ Failed"; progEl.style.color = "var(--accent-danger)"; }
+        trackActivity(`tech_${name.toLowerCase().replace(/ /g, "_")}_failed`);
+      }
+    } catch (e) {
+      setStatus(`${name} failed.`);
+      if (progEl) { progEl.textContent = "✖ Error"; progEl.style.color = "var(--accent-danger)"; }
+    } finally {
+      setBusy(false);
+      setTimeout(() => { if (progEl && progEl.textContent.includes("✔")) progEl.textContent = ""; }, 3000);
+    }
+  }
+
+  if (techInternetBtn) techInternetBtn.addEventListener("click", () => runTechTool("Internet Fix", window.api.techInternetFix, "techInternetProg"));
+  if (techRamBtn)      techRamBtn.addEventListener("click",      () => runTechTool("RAM Boost",    window.api.techRamBoost, "techRamProg"));
+  if (techAutoBtn)     techAutoBtn.addEventListener("click",     () => runTechTool("Auto Fix",     window.api.techAutoFix, "techAutoProg"));
+
+  if (techFullBtn) techFullBtn.addEventListener("click", async () => {
+    if (scanning || cleaning) return;
+    const progEl = el("techFullProg");
+    setBusy(true, "Full Service in progress… This may take a moment.");
+    setStatus("Running Full Service…");
+    if (progEl) { progEl.textContent = "Starting..."; progEl.style.color = "var(--accent-warning)"; }
+    trackActivity("tech_full_service_start");
+    try {
+      if (progEl) progEl.textContent = "Fixing internet connection...";
+      const resInt = await window.api.techInternetFix();
+      if (progEl) progEl.textContent = "Speeding up memory...";
+      const resRam = await window.api.techRamBoost();
+      if (progEl) progEl.textContent = "Repairing background issues...";
+      const resAuto = await window.api.techAutoFix();
+      setStatus("Full Service complete.");
+      if (progEl) { 
+        progEl.textContent = `✔ Freed ${formatBytes(resRam.freedBytes || 0)} RAM & Fixed ${resInt.successCount || 0} Network Issues`; 
+        progEl.style.color = "var(--accent-primary)"; 
+      }
+      trackActivity("tech_full_service_ok");
+    } catch (e) {
+      setStatus("Full Service failed.");
+      if (progEl) { progEl.textContent = "✖ Failed during execution"; progEl.style.color = "var(--accent-danger)"; }
+    } finally {
+      setBusy(false);
+      setTimeout(() => { if (progEl && progEl.textContent.includes("✔")) progEl.textContent = ""; }, 4000);
+    }
+  });
+
   // ── IPC handlers ───────────────────────────────────────────────────────────
+
 
   window.api.onStatus((p) => setStatus(p && p.text ? p.text : ""));
 
@@ -339,6 +419,16 @@
     }
     setButtons();
     trackActivity(p && p.ok ? "scan_ok" : "scan_err", p && p.ok ? `${p.totalFiles | 0} files` : "");
+  });
+
+  window.api.onTechProgress((p) => {
+    if (p && p.id && p.msg) {
+      const progEl = el(p.id);
+      if (progEl) {
+        progEl.textContent = p.msg;
+        progEl.style.color = "var(--accent-warning)";
+      }
+    }
   });
 
   window.api.onCleanDone((p) => {

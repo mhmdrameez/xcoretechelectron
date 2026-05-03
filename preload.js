@@ -33,6 +33,11 @@ contextBridge.exposeInMainWorld("api", {
   setStartupEnabled:  (name, approvedKey, regFlag, enable) =>
     ipcRenderer.invoke("startup:setEnabled", { name, approvedKey, regFlag, enable }),
 
+  // ── technician ───────────────────────────────────────────────────────────
+  techInternetFix:    ()            => ipcRenderer.invoke("tech:internetFix"),
+  techRamBoost:       ()            => ipcRenderer.invoke("tech:ramBoost"),
+  techAutoFix:        ()            => ipcRenderer.invoke("tech:autoFix"),
+
   // ── push events ──────────────────────────────────────────────────────────
   onScanReset:        (fn) => on("scan:reset",       fn),
   onScanProgress:     (fn) => on("scan:progress",    fn),
@@ -46,4 +51,5 @@ contextBridge.exposeInMainWorld("api", {
   onUpdateProgress:   (fn) => on("update:progress",  fn),
   onUpdateDownloaded: (fn) => on("update:downloaded",fn),
   onUpdateStatus:     (fn) => on("update:status",    fn),
+  onTechProgress:     (fn) => on("tech:progress",    fn),
 });

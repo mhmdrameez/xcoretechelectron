@@ -3,25 +3,35 @@
 // Works both in dev and packaged (electron-builder doesn't strip commandLine).
 try {
   const { app: _a } = require("electron");
-  // Keep the renderer heap small; GC more aggressively.
+  // Aggressive JS optimizations: low heap, force GC, optimize for size
   _a.commandLine.appendSwitch("js-flags",
-    "--max-old-space-size=96 --optimize-for-size --gc-interval=100");
-  // No GPU needed — saves ~30 MB VRAM + one extra process.
+    "--max-old-space-size=64 --max-semi-space-size=2 --optimize-for-size --gc-interval=100 --expose-gc");
+  
+  // Completely disable GPU and hardware acceleration
   _a.disableHardwareAcceleration();
-  // Reduce IPC serialisation overhead.
+  _a.commandLine.appendSwitch("disable-gpu");
+  _a.commandLine.appendSwitch("disable-gpu-compositing");
+  _a.commandLine.appendSwitch("disable-software-rasterizer");
+
+  // Reduce IPC serialisation overhead
   _a.commandLine.appendSwitch("enable-features", "SharedArrayBuffer");
-  // Disable unused Chromium services in the renderer.
+
+  // Disable bloated features, services, and extensions to save memory
   _a.commandLine.appendSwitch("disable-features",
     "TranslateUI,MediaRouter,AutofillServerCommunication,Translate," +
     "CalculateNativeWinOcclusion,OptimizationHints,NetworkPrediction," +
     "HeavyAdIntervention,InterestFeedContentSuggestions,PrivacySandboxSettings4," +
-    "SafeBrowsing,SafeBrowsingEnhancedProtection");
+    "SafeBrowsing,SafeBrowsingEnhancedProtection,AudioServiceOutOfProcess," +
+    "Extensions");
+
+  // Disable multi-process overhead for single-page apps
+  _a.commandLine.appendSwitch("disable-site-isolation-trials");
   _a.commandLine.appendSwitch("disable-dev-shm-usage");
-  _a.commandLine.appendSwitch("disable-renderer-backgrounding");
-  _a.commandLine.appendSwitch("disable-background-timer-throttling");
-  _a.commandLine.appendSwitch("disable-backgrounding-occluded-windows");
-  _a.commandLine.appendSwitch("disable-software-rasterizer");
+  
+  // Disable logging and dev tools for production performance
   _a.commandLine.appendSwitch("disable-dev-tools");
+  _a.commandLine.appendSwitch("disable-logging");
+  _a.commandLine.appendSwitch("v", "0");
 } catch (_) {}
 
 const { app, BrowserWindow, ipcMain, dialog, Tray, Menu, nativeImage } = require("electron");
@@ -271,6 +281,9 @@ function createWindow() {
       spellcheck:        false,
       // v8 cache — persist compiled bytecode across launches (faster load)
       v8CacheOptions:    "bypassHeatCheck",
+      enableWebSQL:      false,
+      backgroundThrottling: true,
+      autoplayPolicy:    "user-gesture-required",
       preload: path.join(__dirname, "preload.js"),
     },
   });
@@ -290,6 +303,7 @@ function createWindow() {
     mainWindow.hide();
     // Release renderer memory when window is hidden
     try { mainWindow.webContents.setBackgroundThrottling(true); } catch (_) {}
+    if (global.gc) try { global.gc(); } catch (_) {}
     sendStatus("Running in background. Click tray icon to reopen.");
   });
 
@@ -299,6 +313,7 @@ function createWindow() {
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.setBackgroundThrottling(true);
       }
+      if (global.gc) try { global.gc(); } catch (_) {}
     } catch (_) {}
   });
   mainWindow.on("show", () => {
@@ -579,8 +594,8 @@ function setupIpc() {
     send("scan:reset", {});
     sendStatus("Scanning…");
 
-    const progressSend = debounceMs((p) => send("scan:progress", p), 120);
-    const logSend      = debounceMs((p) => send("log", p), 300);
+    const progressSend = debounceMs((p) => send("scan:progress", p), 250);
+    const logSend      = debounceMs((p) => send("log", p), 500);
     const cancel       = { cancelled: false };
     currentScanCancel  = () => { cancel.cancelled = true; };
 
@@ -598,6 +613,37 @@ function setupIpc() {
     } finally {
       currentScanCancel = null;
     }
+  });
+
+  // ── technician ─────────────────────────────────────────────────────────────
+  ipcMain.handle("tech:internetFix", async () => {
+    if (!licenseState.isPro) return { ok: false, error: "Pro feature locked." };
+    try {
+      sendStatus("Running Internet Fix…");
+      const res = await require("./technician.js").internetFix((msg) => send("tech:progress", { id: "techInternetProg", msg }));
+      sendStatus(res.ok ? "Internet Fix complete." : "Internet Fix partially failed.");
+      return res;
+    } catch (e) { return { ok: false, error: String(e.message || e) }; }
+  });
+
+  ipcMain.handle("tech:ramBoost", async () => {
+    if (!licenseState.isPro) return { ok: false, error: "Pro feature locked." };
+    try {
+      sendStatus("Optimizing RAM…");
+      const res = await require("./technician.js").ramBoost((msg) => send("tech:progress", { id: "techRamProg", msg }));
+      sendStatus(res.ok ? "RAM Boost complete." : "RAM Boost failed.");
+      return res;
+    } catch (e) { return { ok: false, error: String(e.message || e) }; }
+  });
+
+  ipcMain.handle("tech:autoFix", async () => {
+    if (!licenseState.isPro) return { ok: false, error: "Pro feature locked." };
+    try {
+      sendStatus("Running Auto Fix…");
+      const res = await require("./technician.js").autoFix((msg) => send("tech:progress", { id: "techAutoProg", msg }));
+      sendStatus(res.ok ? "Auto Fix complete." : "Auto Fix failed.");
+      return res;
+    } catch (e) { return { ok: false, error: String(e.message || e) }; }
   });
 
   ipcMain.handle("scan:cancel", () => {
@@ -634,8 +680,8 @@ function setupIpc() {
       sendStatus("Cleaning…");
       cleanRunning = true;
 
-      const progressSend = debounceMs((p) => send("clean:progress", p), 120);
-      const logSend      = debounceMs((p) => send("log", p), 300);
+      const progressSend = debounceMs((p) => send("clean:progress", p), 250);
+      const logSend      = debounceMs((p) => send("log", p), 500);
       const cleanStart   = Date.now();
 
       const result    = await cleaner().cleanFiles(mergedFiles, mergedDirs, { onProgress: progressSend, onLog: logSend });
@@ -690,8 +736,8 @@ async function runAutoClean({ sendStatus, send }) {
 
     sendStatus("Auto-clean: scanning…");
     const cancel = { cancelled: false };
-    const progressSend = debounceMs((p) => send("scan:progress", p), 150);
-    const logSend = debounceMs((p) => send("log", p), 300);
+    const progressSend = debounceMs((p) => send("scan:progress", p), 250);
+    const logSend = debounceMs((p) => send("log", p), 500);
 
     const scanResult = await scanner().scanDefaultTargets({
       cancel,
