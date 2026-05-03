@@ -35,6 +35,16 @@
   const goProBtn = el("goProBtn");
   const activateModal = el("activateModal");
   const closeActivateBtn = el("closeActivateBtn");
+  const buyKeyBtn = el("buyKeyBtn");
+  const paymentModal = el("paymentModal");
+  const closePaymentBtn = el("closePaymentBtn");
+  const sellerUpiIdNotice = el("sellerUpiIdNotice");
+  const sellerUpiIdDisplay = el("sellerUpiIdDisplay");
+  const copyUpiIdBtn = el("copyUpiId");
+  const qrcodeContainer = el("qrcodeContainer");
+  const upiDeepLinkBtn = el("upiDeepLinkBtn");
+  const paymentEmailBtn = el("paymentEmailBtn");
+  const paymentWhatsappBtn = el("paymentWhatsappBtn");
   const activateBtn = el("activateBtn");
   const licenseKeyInput = el("licenseKeyInput");
   const licenseErrorEl = el("licenseError");
@@ -53,6 +63,14 @@
   // ── constants ──────────────────────────────────────────────────────────────
   const MAX_LIST_ROWS = 2000;
   const VISIBLE_ROWS = 100;
+  const SELLER_UPI_ID = "muhammedrameez2000-7@okaxis";
+  const PAYMENT_AMOUNT = "399";
+  const PAYEE_NAME = "XCoreTech Software";
+  const NOTE_TEXT = "XCoreTech Pro License 399 Lifetime";
+  const SUPPORT_EMAIL = "xcoretech@yahoo.com";
+  const SUPPORT_WHATSAPP_URL = "https://wa.me/919446960834";
+  const upiUrl = `upi://pay?pa=${encodeURIComponent(SELLER_UPI_ID)}&pn=${encodeURIComponent(PAYEE_NAME)}&am=${PAYMENT_AMOUNT}&cu=INR&tn=${encodeURIComponent(NOTE_TEXT)}`;
+  const proofEmailUrl = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("XCoreTech Pro payment proof")}&body=${encodeURIComponent("Hello XCoreTech,\n\nI completed the ₹399 Lifetime Pro payment.\n\nEmail for license key:\nTransaction ID:\n\nThank you.")}`;
 
   // ── in-memory state ONLY — zero localStorage / zero file cache ─────────────
   let scanning = false;
@@ -228,6 +246,48 @@
   function trackActivity(action, extra) {
     const note = [action, extra].filter(Boolean).join(" | ").slice(0, 64);
     track({ event: "activity", name: "System User", phone: "unknown", junk: note || "activity" });
+  }
+
+  function openExternalUrl(url) {
+    if (!url) return;
+    if (window.api && typeof window.api.openExternal === "function") {
+      window.api.openExternal(url).catch(() => { window.location.href = url; });
+      return;
+    }
+    window.location.href = url;
+  }
+
+  function generatePaymentQr() {
+    if (!qrcodeContainer) return;
+    const size = window.innerWidth < 480 ? 146 : 164;
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&margin=8&data=${encodeURIComponent(upiUrl)}`;
+    qrcodeContainer.innerHTML = "";
+    qrcodeContainer.removeAttribute("style");
+    const img = document.createElement("img");
+    img.width = size;
+    img.height = size;
+    img.alt = "UPI payment QR code";
+    img.src = qrUrl;
+    img.onerror = () => {
+      qrcodeContainer.textContent = "QR unavailable. Use the UPI ID above.";
+      qrcodeContainer.style.color = "#111827";
+      qrcodeContainer.style.fontWeight = "700";
+      qrcodeContainer.style.fontSize = "12px";
+      qrcodeContainer.style.textAlign = "center";
+      qrcodeContainer.style.padding = "16px";
+    };
+    qrcodeContainer.appendChild(img);
+  }
+
+  function togglePaymentModal(show) {
+    if (!paymentModal) return;
+    paymentModal.classList.toggle("visible", !!show);
+    if (show) {
+      generatePaymentQr();
+      trackActivity("payment_modal_open");
+    } else if (qrcodeContainer) {
+      qrcodeContainer.textContent = "";
+    }
   }
 
   // ── auto-start ─────────────────────────────────────────────────────────────
@@ -659,6 +719,34 @@
   if (goProBtn) goProBtn.addEventListener("click", () => toggleActivateModal(true));
   if (closeActivateBtn) closeActivateBtn.addEventListener("click", () => toggleActivateModal(false));
   if (activateModal) activateModal.addEventListener("click", (e) => { if (e.target === activateModal) toggleActivateModal(false); });
+  if (buyKeyBtn) buyKeyBtn.addEventListener("click", () => togglePaymentModal(true));
+  if (closePaymentBtn) closePaymentBtn.addEventListener("click", () => togglePaymentModal(false));
+  if (paymentModal) paymentModal.addEventListener("click", (e) => { if (e.target === paymentModal) togglePaymentModal(false); });
+  if (upiDeepLinkBtn) upiDeepLinkBtn.addEventListener("click", () => {
+    trackActivity("upi_pay_clicked");
+    openExternalUrl(upiUrl);
+  });
+  if (paymentEmailBtn) paymentEmailBtn.addEventListener("click", () => openExternalUrl(proofEmailUrl));
+  if (paymentWhatsappBtn) paymentWhatsappBtn.addEventListener("click", () => openExternalUrl(SUPPORT_WHATSAPP_URL));
+  if (copyUpiIdBtn) copyUpiIdBtn.addEventListener("click", async () => {
+    const originalText = copyUpiIdBtn.textContent;
+    try {
+      await navigator.clipboard.writeText(SELLER_UPI_ID);
+      copyUpiIdBtn.textContent = "Copied";
+    } catch (_) {
+      copyUpiIdBtn.textContent = "Copy failed";
+    }
+    setTimeout(() => { copyUpiIdBtn.textContent = originalText; }, 1500);
+  });
+  window.addEventListener("resize", () => {
+    if (!paymentModal || !paymentModal.classList.contains("visible")) return;
+    clearTimeout(togglePaymentModal.resizeTimer);
+    togglePaymentModal.resizeTimer = setTimeout(generatePaymentQr, 180);
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    if (paymentModal && paymentModal.classList.contains("visible")) togglePaymentModal(false);
+  });
 
   function toggleActivateModal(show) {
     if (activateModal) activateModal.classList.toggle("visible", !!show);
@@ -668,6 +756,9 @@
       licenseKeyInput.focus();
     }
   }
+
+  if (sellerUpiIdNotice) sellerUpiIdNotice.textContent = SELLER_UPI_ID;
+  if (sellerUpiIdDisplay) sellerUpiIdDisplay.textContent = SELLER_UPI_ID;
 
   if (activateBtn) activateBtn.addEventListener("click", async () => {
     const key = String(licenseKeyInput ? licenseKeyInput.value : "").trim();

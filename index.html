@@ -252,6 +252,57 @@
       </div>
     </div>
 
+    <!-- Payment Modal -->
+    <div id="paymentModal" class="modal paymentModal">
+      <div class="modalCard paymentCard">
+        <div class="paymentHeader">
+          <div>
+            <div class="paymentEyebrow">Lifetime Pro License</div>
+            <div class="modalTitle paymentTitle">₹399 / Lifetime Pro</div>
+          </div>
+          <button id="closePaymentBtn" class="modalCloseBtn" aria-label="Close payment modal">&times;</button>
+        </div>
+
+        <div class="sellerNotice">
+          Money directly goes to seller:
+          <strong id="sellerUpiIdNotice">muhammedrameez2000-7@okaxis</strong>
+        </div>
+
+        <div class="paymentPanel">
+          <div class="paymentPanelTitle">UPI Details (Pay to this ID)</div>
+          <div class="paymentDetail">
+            <span>UPI ID</span>
+            <div class="upiCopyRow">
+              <strong id="sellerUpiIdDisplay">muhammedrameez2000-7@okaxis</strong>
+              <button id="copyUpiId" class="copyBtn" type="button">Copy</button>
+            </div>
+          </div>
+          <div class="amountRow">
+            <span>Amount</span>
+            <strong>₹399.00 INR</strong>
+          </div>
+          <div class="paymentHint">
+            Scan QR or click UPI button, complete payment. After payment, send screenshot or transaction ID to get your license key.
+          </div>
+        </div>
+
+        <div class="qrWrap">
+          <div id="qrcodeContainer" class="qrBox"></div>
+        </div>
+
+        <button id="upiDeepLinkBtn" class="btn upiPayBtn" type="button">
+          Pay with UPI App (GPay / PhonePe / Paytm)
+        </button>
+
+        <div class="proofPanel">
+          <div class="paymentPanelTitle">Send payment proof & your email to:</div>
+          <button id="paymentEmailBtn" class="proofBtn" type="button">Email: xcoretech@yahoo.com</button>
+          <button id="paymentWhatsappBtn" class="proofBtn whatsappBtn" type="button">WhatsApp Business: +91 9446960834</button>
+          <div class="paymentHint">We will send your lifetime activation key within 2-12 hours after verification.</div>
+        </div>
+      </div>
+    </div>
+
     <!-- ── Professional Footer ── -->
     <footer class="footer">
       <div class="contactBox">

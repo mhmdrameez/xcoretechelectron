@@ -36,7 +36,7 @@ try {
   _a.commandLine.appendSwitch("v", "0");
 } catch (_) {}
 
-const { app, BrowserWindow, ipcMain, dialog, Tray, Menu, nativeImage } = require("electron");
+const { app, BrowserWindow, ipcMain, dialog, Tray, Menu, nativeImage, shell } = require("electron");
 const fs   = require("fs");
 const { exec }  = require("child_process");
 const path = require("path");
@@ -541,6 +541,17 @@ function setStartupItemEnabled(name, approvedKey, regFlag, enable) {
 
 // ── IPC setup ─────────────────────────────────────────────────────────────────
 function setupIpc() {
+
+  ipcMain.handle("app:openExternal", async (_e, url) => {
+    try {
+      const target = String(url || "").trim();
+      if (!/^(https:\/\/|mailto:|upi:\/\/)/i.test(target)) return { ok: false, error: "Unsupported link." };
+      await shell.openExternal(target);
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: String(e.message || e) };
+    }
+  });
 
   // autostart
   ipcMain.handle("autostart:get", async () => {
