@@ -55,9 +55,10 @@ test.describe('UI Structure Extra Coverage', () => {
     await expect(window.locator('#trustedCount')).toContainText('Users');
   });
 
-  test('footer support and version information is visible', async () => {
-    await expect(window.locator('.footer')).toContainText('Support: +91 7907858474');
+  test('footer keeps version information without promotional content', async () => {
     await expect(window.locator('.footer')).toContainText(`Version ${packageJson.version}`);
+    await expect(window.locator('.footer')).not.toContainText('Engineering Excellence');
+    await expect(window.locator('.footer')).not.toContainText('Support:');
   });
 
   test('busy overlay is hidden while idle', async () => {
