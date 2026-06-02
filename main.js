@@ -36,15 +36,10 @@ try {
   _a.commandLine.appendSwitch("v", "0");
 } catch (_) {}
 
-const { app, BrowserWindow, ipcMain, dialog, Tray, Menu, nativeImage, shell } = require("electron");
+const { app, BrowserWindow, ipcMain, dialog, Tray, Menu, nativeImage } = require("electron");
 const fs   = require("fs");
 const { exec }  = require("child_process");
 const path = require("path");
-const https = require("https");
-const crypto = require("crypto");
-const os = require("os");
-
-const { safeStorage } = require("electron");
 
 // Lazy-load heavy modules — not needed until the user clicks something.
 let _scanner  = null; const scanner  = () => (_scanner  ||= require(path.join(__dirname, "scanner.js")));
@@ -87,7 +82,6 @@ function isAutoCleanLaunch(argv = process.argv) {
 
 // ── persistence ───────────────────────────────────────────────────────────────
 const statsPath   = path.join(app.getPath("userData"), "stats.json");
-const licensePath = path.join(app.getPath("userData"), "license", "identity.bin");
 
 function loadJson(p, def) {
   try {
@@ -106,144 +100,7 @@ function saveJson(p, data) {
 
 const cleanStats = loadJson(statsPath, { totalRuns: 0, totalDeletedItems: 0, totalBytesFreed: 0, totalDurationMs: 0, lastRunAt: null });
 
-// ── high-encryption license persistence ───────────────────────────────────────
-function loadLicense() {
-  try {
-    if (fs.existsSync(licensePath)) {
-      const encrypted = fs.readFileSync(licensePath);
-      if (!encrypted || encrypted.length === 0) return { isPro: false, key: "", activatedAt: null, deviceId: null };
 
-      if (safeStorage.isEncryptionAvailable()) {
-        try {
-          const decrypted = safeStorage.decryptString(encrypted);
-          const parsed = JSON.parse(decrypted);
-          if (parsed && typeof parsed === "object") return parsed;
-        } catch (e) {
-          // If decryption fails, it might be due to user change or OS lock
-          console.error("[License] Decryption failed:", e);
-          sendEvent("activity", { name: "System Boot", junk: `license_load_error | ${e.message || "decryption_failed"}` }, { force: true, immediate: true });
-          
-          // Last resort: check if it's plain text (rare but possible if safeStorage was unavailable during save)
-          try {
-            return JSON.parse(encrypted.toString("utf8"));
-          } catch (_) {}
-        }
-      } else {
-        try {
-          return JSON.parse(encrypted.toString("utf8"));
-        } catch (_) {}
-      }
-    }
-  } catch (err) {
-    console.error("[License] Load error:", err);
-  }
-  return { isPro: false, key: "", activatedAt: null, deviceId: null };
-}
-
-function saveLicense(data) {
-  try {
-    const dir = path.dirname(licensePath);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    const str = JSON.stringify(data);
-    if (safeStorage.isEncryptionAvailable()) {
-      const encrypted = safeStorage.encryptString(str);
-      fs.writeFileSync(licensePath, encrypted);
-    } else {
-      fs.writeFileSync(licensePath, str, "utf8");
-    }
-  } catch (_) {}
-}
-
-let licenseState = { isPro: false, key: "", activatedAt: null, deviceId: null };
-
-// ── unique device identification ──────────────────────────────────────────────
-async function getSystemId() {
-  return new Promise((resolve) => {
-    // Basic hardware-bound hash for device linking
-    const raw = os.hostname() + os.cpus()[0]?.model + os.totalmem() + os.arch();
-    const hash = crypto.createHash("sha256").update(raw).digest("hex");
-    resolve(hash);
-  });
-}
-
-// ── license service connection (High Encryption Transport) ───────────────────
-const { SB_URL, SB_KEY } = require(path.join(__dirname, "config.js"));
-
-async function verifyOnlineLicense(key, deviceId) {
-  return new Promise((resolve) => {
-    const options = {
-      method: "GET",
-      headers: {
-        "apikey": SB_KEY,
-        "Authorization": `Bearer ${SB_KEY}`,
-        "Content-Type": "application/json"
-      }
-    };
-
-    // Query for the license key
-    const url = `${SB_URL}/rest/v1/licenses?key=eq.${encodeURIComponent(key)}&select=*`;
-    
-    const req = https.get(url, options, (res) => {
-      let data = "";
-      res.on("data", (chunk) => data += chunk);
-      res.on("end", async () => {
-        try {
-          const list = JSON.parse(data);
-          
-          if (!list || list.length === 0) {
-            // If the key is visibly in the DB but returns empty, RLS is blocking it.
-            return resolve({ ok: false, error: "License key not found." });
-          }
-          
-          const entry = list[0];
-
-          // Device Linking Logic
-          if (!entry.used || !entry.device_id) {
-            // First time activation - link to this device and mark as used
-            const updateOk = await updateLicenseDevice(key, deviceId);
-            if (updateOk) {
-              return resolve({ ok: true, key: entry.key });
-            } else {
-              return resolve({ ok: false, error: "Failed to link device to license." });
-            }
-          } else if (entry.device_id !== deviceId) {
-            return resolve({ ok: false, error: "License already in use on another device." });
-          }
-
-          resolve({ ok: true, key: entry.key });
-        } catch (e) {
-          resolve({ ok: false, error: "Encrypted communication failure." });
-        }
-      });
-    });
-
-    req.on("error", () => resolve({ ok: false, error: "Network security timeout." }));
-  });
-}
-
-async function updateLicenseDevice(key, deviceId) {
-  return new Promise((resolve) => {
-    const body = JSON.stringify({ device_id: deviceId, used: true });
-    const options = {
-      method: "PATCH",
-      hostname: new URL(SB_URL).hostname,
-      path: `/rest/v1/licenses?key=eq.${encodeURIComponent(key)}`,
-      headers: {
-        "apikey": SB_KEY,
-        "Authorization": `Bearer ${SB_KEY}`,
-        "Content-Type": "application/json",
-        "Prefer": "return=minimal"
-      }
-    };
-
-    const req = https.request(options, (res) => {
-      resolve(res.statusCode === 204 || res.statusCode === 200);
-    });
-    req.on("error", () => resolve(false));
-    req.write(body);
-    req.end();
-  });
-}
 
 
 // ── stats snapshot ────────────────────────────────────────────────────────────
@@ -329,7 +186,7 @@ function createWindow() {
   mainWindow.setMenuBarVisibility(false);
   mainWindow.loadFile(path.join(__dirname, "index.html"));
 
-  const shouldStayHidden = licenseState.isPro && isBackgroundLaunch();
+  const shouldStayHidden = isBackgroundLaunch();
   mainWindow.once("ready-to-show", () => {
     if (mainWindow && !shouldStayHidden) mainWindow.show();
   });
@@ -556,17 +413,6 @@ function setStartupItemEnabled(name, approvedKey, regFlag, enable) {
 // ── IPC setup ─────────────────────────────────────────────────────────────────
 function setupIpc() {
 
-  ipcMain.handle("app:openExternal", async (_e, url) => {
-    try {
-      const target = String(url || "").trim();
-      if (!/^(https:\/\/|mailto:|upi:\/\/)/i.test(target)) return { ok: false, error: "Unsupported link." };
-      await shell.openExternal(target);
-      return { ok: true };
-    } catch (e) {
-      return { ok: false, error: String(e.message || e) };
-    }
-  });
-
   // autostart
   ipcMain.handle("autostart:get", async () => {
     try { return { enabled: await getAutoStartEnabled(AUTO_START_NAME) }; }
@@ -585,60 +431,6 @@ function setupIpc() {
   ipcMain.handle("startup:setEnabled", async (_e, { name, approvedKey, regFlag, enable }) => {
     try { return await setStartupItemEnabled(name, approvedKey, regFlag, !!enable); }
     catch (e) { return { ok: false, error: String(e.message || e) }; }
-  });
-
-  // license
-  ipcMain.handle("license:get", async () => ({ ok: true, license: licenseState }));
-  ipcMain.handle("license:verify", async (_e, key) => {
-    try {
-      const k = String(key || "").trim();
-      if (!k) return { ok: false, error: "Please enter a valid key." };
-
-      const deviceId = await getSystemId();
-      
-      // Perform online license verification
-      const result = await verifyOnlineLicense(k, deviceId);
-      
-      if (result.ok) {
-        licenseState = { 
-          isPro: true, 
-          key: k, 
-          activatedAt: Date.now(),
-          deviceId: deviceId
-        };
-        saveLicense(licenseState);
-        return { ok: true, msg: "Pro Version Activated!" };
-      }
-      
-      return { ok: false, error: result.error };
-    } catch (err) {
-      return { ok: false, error: "High-level encryption verification failed." };
-    }
-  });
-
-  ipcMain.handle("license:activatePaid", async (_e, payment) => {
-    try {
-      const p = payment && typeof payment === "object" ? payment : {};
-      const paymentId = String(p.razorpay_payment_id || p.paymentId || "").trim();
-      if (!/^pay_[A-Za-z0-9]+$/.test(paymentId)) {
-        return { ok: false, error: "Invalid Razorpay payment response." };
-      }
-
-      const deviceId = await getSystemId();
-      licenseState = {
-        isPro: true,
-        key: `RAZORPAY-${paymentId}`,
-        activatedAt: Date.now(),
-        deviceId,
-        paymentProvider: "razorpay",
-        paymentId,
-      };
-      saveLicense(licenseState);
-      await sendEvent("activity", { name: "Razorpay", junk: `payment_activated | ${paymentId}` }, { force: true, immediate: true });
-      return { ok: true, msg: "Payment successful. Pro Version Activated!", license: licenseState };
-    } catch (err) {
-      return { ok: false, error: "Payment activation failed." };
-    }
   });
 
   // stats / system
@@ -691,7 +483,6 @@ function setupIpc() {
 
   // ── technician ─────────────────────────────────────────────────────────────
   ipcMain.handle("tech:internetFix", async () => {
-    if (!licenseState.isPro) return { ok: false, error: "Pro feature locked." };
     try {
       sendStatus("Running Internet Fix…");
       const res = await require("./technician.js").internetFix((msg) => send("tech:progress", { id: "techInternetProg", msg }));
@@ -701,7 +492,6 @@ function setupIpc() {
   });
 
   ipcMain.handle("tech:ramBoost", async () => {
-    if (!licenseState.isPro) return { ok: false, error: "Pro feature locked." };
     try {
       sendStatus("Optimizing RAM…");
       const res = await require("./technician.js").ramBoost((msg) => send("tech:progress", { id: "techRamProg", msg }));
@@ -711,7 +501,6 @@ function setupIpc() {
   });
 
   ipcMain.handle("tech:autoFix", async () => {
-    if (!licenseState.isPro) return { ok: false, error: "Pro feature locked." };
     try {
       sendStatus("Running Auto Fix…");
       const res = await require("./technician.js").autoFix((msg) => send("tech:progress", { id: "techAutoProg", msg }));
@@ -894,7 +683,7 @@ if (!gotLock) {
 } else {
   app.on("second-instance", (_event, argv) => {
     try {
-      if (licenseState.isPro && isBackgroundLaunch(argv)) {
+      if (isBackgroundLaunch(argv)) {
         sendStatus("Running in background. Click tray icon to reopen.");
         return;
       }
@@ -911,18 +700,11 @@ if (!gotLock) {
     initAnalytics({ endpoint, getSystemInfo, getLocation });
     primeLocation(path.join(app.getPath("userData"), "location-cache.json"));
 
-    // Load license after app is ready to ensure safeStorage is available
-    licenseState = loadLicense();
-    if (process.env.PLAYWRIGHT_TEST) {
-      licenseState.isPro = true;
-    }
-
     createWindow();
     createTray();
     setupIpc();
 
-    // Keep startup enabled for all users. Pro launches stay hidden and auto-clean;
-    // Free launches open normally so customers see the app and no cleaning runs.
+    // Keep startup enabled so background launches can run auto-clean.
     setTimeout(async () => {
       try {
         await setAutoStartEnabled(AUTO_START_NAME, true);
@@ -953,18 +735,10 @@ if (!gotLock) {
     setTimeout(() => updater().initUpdater(send), 8000);  // updater: 8 s delay
 
     if (isAutoClean) {
-      if (licenseState.isPro) {
-        // Delay auto-clean to let the system stabilize
-        setTimeout(() => {
-          runAutoClean({ sendStatus, send });
-        }, 12000); // 12s delay for background runs
-      } else {
-        sendStatus("Startup launch opened. Auto-clean is a Pro feature.");
-        showMainWindow();
-      }
-    } else if (isHidden && !licenseState.isPro) {
-      sendStatus("Startup launch opened. Auto-clean is a Pro feature.");
-      showMainWindow();
+      // Delay auto-clean to let the system stabilize
+      setTimeout(() => {
+        runAutoClean({ sendStatus, send });
+      }, 12000); // 12s delay for background runs
     }
   });
 

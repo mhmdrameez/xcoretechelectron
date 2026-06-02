@@ -21,24 +21,10 @@ async function launchApp() {
   await window.addInitScript(() => {
     const callbacks = {};
     window.__openedExternalLinks = [];
-    window.RAZORPAY_KEY_ID = 'rzp_test_PLAYWRIGHT12345';
-    window.__razorpayOptions = null;
-    window.__razorpayOpened = false;
-    window.__paidLicenseActivations = [];
     window.__mockIpcCallbacks = callbacks;
     window.__sendMockIpc = (channel, payload) => {
       if (typeof callbacks[channel] === 'function') callbacks[channel](payload);
     };
-    window.Razorpay = function Razorpay(options) {
-      window.__razorpayOptions = options;
-      this.on = (eventName, handler) => {
-        window.__razorpayFailedHandler = eventName === 'payment.failed' ? handler : window.__razorpayFailedHandler;
-      };
-      this.open = () => {
-        window.__razorpayOpened = true;
-      };
-    };
-
     const on = (channel, fn) => {
       callbacks[channel] = fn;
       return () => {
@@ -65,12 +51,6 @@ async function launchApp() {
         ram: 16,
         free: 128,
       } }),
-      getLicense: async () => ({ ok: true, license: { isPro: false } }),
-      verifyLicense: async () => ({ ok: false, error: 'Verification failed.' }),
-      activatePaidLicense: async (payment) => {
-        window.__paidLicenseActivations.push(payment);
-        return { ok: true, msg: 'Payment successful. Pro Version Activated!' };
-      },
       getCounts: async () => ({ ok: true, total: 1234 }),
       trackEvent: async () => ({ ok: true }),
       updateInstall: async () => ({ ok: true }),
@@ -80,10 +60,6 @@ async function launchApp() {
       techInternetFix: async () => ({ ok: true, successCount: 5, total: 5 }),
       techRamBoost: async () => ({ ok: true, freedBytes: 1024 }),
       techAutoFix: async () => ({ ok: true }),
-      openExternal: async (url) => {
-        window.__openedExternalLinks.push(url);
-        return { ok: true };
-      },
       onScanReset: (fn) => on('scan:reset', fn),
       onScanProgress: (fn) => on('scan:progress', fn),
       onScanDone: (fn) => on('scan:done', fn),

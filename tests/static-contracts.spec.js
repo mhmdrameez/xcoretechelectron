@@ -16,7 +16,7 @@ test.describe('Static App Contracts', () => {
     expect(pkg.main).toBe('index.js');
   });
 
-  test('build package includes renderer, styles, preload, and HTML', () => {
+  test('build package includes core UI files without license configuration', () => {
     const pkg = JSON.parse(read('package.json'));
     expect(pkg.build.files).toEqual(expect.arrayContaining([
       'index.html',
@@ -25,83 +25,46 @@ test.describe('Static App Contracts', () => {
       'preload.js',
       'main.js',
     ]));
+    expect(pkg.build.files).not.toContain('config.js');
   });
 
-  test('preload exposes the external link bridge', () => {
-    expect(read('preload.js')).toContain('openExternal');
-    expect(read('preload.js')).toContain('app:openExternal');
-    expect(read('preload.js')).toContain('activatePaidLicense');
-    expect(read('preload.js')).toContain('license:activatePaid');
-  });
+  test('activation and payment model is removed', () => {
+    const source = [
+      read('index.html'),
+      read('renderer.js'),
+      read('preload.js'),
+      read('main.js'),
+    ].join('\n');
 
-  test('main process only allows supported external link protocols', () => {
-    const main = read('main.js');
-    expect(main).toContain('app:openExternal');
-    expect(main).toContain('https:\\/\\/|mailto:|upi:\\/\\/');
-  });
-
-  test('payment modal markup exists with required controls', () => {
-    const html = read('index.html');
-    for (const id of [
+    for (const removed of [
+      'activateModal',
       'paymentModal',
-      'closePaymentBtn',
-      'razorpayCheckoutBtn',
-      'paymentStatusText',
-      'paymentEmailBtn',
+      'license:verify',
+      'license:activatePaid',
+      'RAZORPAY_KEY_ID',
+      'verifyOnlineLicense',
+      'licenseState',
     ]) {
-      expect(html).toContain(`id="${id}"`);
+      expect(source).not.toContain(removed);
     }
   });
 
-  test('payment constants are present in renderer', () => {
-    const renderer = read('renderer.js');
-    expect(renderer).toContain('PAYMENT_AMOUNT = "399"');
-    expect(renderer).toContain('PAYMENT_AMOUNT_SUBUNITS = 39900');
-    expect(renderer).toContain('RAZORPAY_KEY_ID');
-    expect(renderer).toContain('https://checkout.razorpay.com/v1/checkout.js');
-    expect(renderer).toContain('XCoreTech Software');
-    expect(renderer).toContain('xcoretech@yahoo.com');
+  test('full version badge is present and purchase button is removed', () => {
+    const html = read('index.html');
+    expect(html).toContain('<div id="proBadge" class="proBadge pro">PRO</div>');
+    expect(html).not.toContain('id="goProBtn"');
   });
 
-  test('payment modal styles include responsive mobile handling', () => {
-    const css = read('styles.css');
-    expect(css).toContain('.paymentModal');
-    expect(css).toContain('.paymentCard');
-    expect(css).toContain('@media (max-width: 520px)');
-  });
-
-  test('free boot startup opens the app instead of notifying or auto-cleaning', () => {
-    const main = read('main.js');
-    expect(main).toContain('Startup launch opened. Auto-clean is a Pro feature.');
-    expect(main).toContain('showMainWindow();');
-    expect(main).not.toContain('showFreeProReminder');
-    expect(main).not.toContain('Notification.isSupported');
-    expect(main).not.toContain('markFreeProReminderShown');
-
-    const freeBranch = main.slice(
-      main.indexOf('sendStatus("Startup launch opened. Auto-clean is a Pro feature.")'),
-      main.indexOf('} else if (isHidden && !licenseState.isPro)')
-    );
-    expect(freeBranch).not.toContain('runAutoClean');
-    expect(freeBranch).not.toContain('cleaner().cleanFiles');
-  });
-
-  test('boot auto-clean launches stay hidden for Pro only', () => {
+  test('boot auto-clean launches stay hidden and run without activation gating', () => {
     const main = read('main.js');
     const utils = read('utils.js');
 
     expect(utils).toContain('--autoclean --hidden');
     expect(main).toContain('function isBackgroundLaunch');
     expect(main).toContain('hasProcessArg(argv, "--hidden") || hasProcessArg(argv, "--autoclean")');
-    expect(main).toContain('const shouldStayHidden = licenseState.isPro && isBackgroundLaunch()');
+    expect(main).toContain('const shouldStayHidden = isBackgroundLaunch()');
     expect(main).toContain('if (mainWindow && !shouldStayHidden) mainWindow.show()');
-
-    const secondInstanceBranch = main.slice(
-      main.indexOf('app.on("second-instance"'),
-      main.indexOf('app.whenReady().then')
-    );
-    expect(secondInstanceBranch).toContain('if (licenseState.isPro && isBackgroundLaunch(argv))');
-    expect(secondInstanceBranch.indexOf('return;')).toBeLessThan(secondInstanceBranch.indexOf('showMainWindow();'));
+    expect(main).not.toContain('Auto-clean is a Pro feature.');
   });
 
   test('HTML loads only the local renderer script', () => {

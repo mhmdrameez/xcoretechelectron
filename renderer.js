@@ -32,41 +32,17 @@
   const optStatusEl = el("optStatus");
   const trustedCountEl = el("trustedCount");
   const trustedBadgeEl = el("trustedBadge");
-  const goProBtn = el("goProBtn");
-  const activateModal = el("activateModal");
-  const closeActivateBtn = el("closeActivateBtn");
-  const buyKeyBtn = el("buyKeyBtn");
-  const paymentModal = el("paymentModal");
-  const closePaymentBtn = el("closePaymentBtn");
-  const razorpayCheckoutBtn = el("razorpayCheckoutBtn");
-  const paymentStatusText = el("paymentStatusText");
-  const paymentEmailBtn = el("paymentEmailBtn");
-  const activateBtn = el("activateBtn");
-  const licenseKeyInput = el("licenseKeyInput");
-  const licenseErrorEl = el("licenseError");
   const proBadge = el("proBadge");
   const autoStartContainer = el("autoStartContainer");
-  const startupOverlay = el("startupOverlay");
-  const startupLockTag = el("startupLockTag");
 
   const techInternetBtn = el("techInternetBtn");
   const techRamBtn = el("techRamBtn");
   const techAutoBtn = el("techAutoBtn");
   const techFullBtn = el("techFullBtn");
-  const techOverlay = el("techOverlay");
-  const techLockTag = el("techLockTag");
 
   // ── constants ──────────────────────────────────────────────────────────────
   const MAX_LIST_ROWS = 2000;
   const VISIBLE_ROWS = 100;
-  const PAYMENT_AMOUNT = "399";
-  const PAYMENT_AMOUNT_SUBUNITS = 39900;
-  const RAZORPAY_KEY_ID = "rzp_test_UdeEdGNNKjTGsB";
-  const RAZORPAY_CHECKOUT_URL = "https://checkout.razorpay.com/v1/checkout.js";
-  const PAYEE_NAME = "XCoreTech Software";
-  const PRODUCT_DESCRIPTION = "XCoreTech Lifetime Pro License";
-  const SUPPORT_EMAIL = "xcoretech@yahoo.com";
-  const paymentSupportUrl = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("XCoreTech Pro Razorpay payment support")}&body=${encodeURIComponent("Hello XCoreTech,\n\nI completed the Razorpay payment for XCoreTech Lifetime Pro.\n\nEmail for license key:\nRazorpay Payment ID:\n\nThank you.")}`;
 
   // ── in-memory state ONLY — zero localStorage / zero file cache ─────────────
   let scanning = false;
@@ -173,27 +149,6 @@
     if (sysFreeEl) sysFreeEl.textContent = s.free ? `${s.free} GB` : "-";
   }
 
-  function applyProState(isPro) {
-    if (isPro) {
-      if (proBadge) { proBadge.textContent = "PRO"; proBadge.className = "proBadge pro"; }
-      if (goProBtn) goProBtn.style.display = "none";
-      if (autoStartContainer) autoStartContainer.classList.remove("proLockedFeature");
-      if (startupOverlay) startupOverlay.classList.add("hidden");
-      if (startupLockTag) startupLockTag.style.display = "none";
-      if (autoStartChk) autoStartChk.disabled = false;
-      if (techOverlay) techOverlay.classList.add("hidden");
-      if (techLockTag) techLockTag.style.display = "none";
-    } else {
-      if (proBadge) { proBadge.textContent = "FREE"; proBadge.className = "proBadge free"; }
-      if (goProBtn) goProBtn.style.display = "flex";
-      if (autoStartContainer) autoStartContainer.classList.add("proLockedFeature");
-      if (startupOverlay) startupOverlay.classList.remove("hidden");
-      if (startupLockTag) startupLockTag.style.display = "inline-block";
-      if (autoStartChk) autoStartChk.disabled = true;
-      if (techOverlay) techOverlay.classList.remove("hidden");
-      if (techLockTag) techLockTag.style.display = "inline-block";
-    }
-  }
   function updateImpactCards(s) {
     if (!s) return;
     if (impactTotalCleanedEl) impactTotalCleanedEl.textContent = formatBytes(s.totalBytesFreed || 0);
@@ -252,124 +207,6 @@
     track({ event: "activity", name: "System User", phone: "unknown", junk: note || "activity" });
   }
 
-  function openExternalUrl(url) {
-    if (!url) return;
-    if (window.api && typeof window.api.openExternal === "function") {
-      window.api.openExternal(url).catch(() => { window.location.href = url; });
-      return;
-    }
-    window.location.href = url;
-  }
-
-  function setPaymentStatus(message, isError) {
-    if (!paymentStatusText) return;
-    paymentStatusText.textContent = message;
-    paymentStatusText.classList.toggle("error", !!isError);
-  }
-
-  function isRazorpayConfigured() {
-    const keyId = getRazorpayKeyId();
-    return /^rzp_(test|live)_[A-Za-z0-9]+$/.test(keyId) && !keyId.includes("REPLACE");
-  }
-
-  function getRazorpayKeyId() {
-    return String(window.RAZORPAY_KEY_ID || RAZORPAY_KEY_ID || "").trim();
-  }
-
-  function loadRazorpayCheckout() {
-    if (window.Razorpay) return Promise.resolve();
-    if (loadRazorpayCheckout.promise) return loadRazorpayCheckout.promise;
-
-    loadRazorpayCheckout.promise = new Promise((resolve, reject) => {
-      const script = document.createElement("script");
-      script.src = RAZORPAY_CHECKOUT_URL;
-      script.async = true;
-      script.onload = () => resolve();
-      script.onerror = () => reject(new Error("Unable to load Razorpay Checkout."));
-      document.head.appendChild(script);
-    });
-    return loadRazorpayCheckout.promise;
-  }
-
-  async function openRazorpayCheckout() {
-    if (!isRazorpayConfigured()) {
-      setPaymentStatus("Razorpay key id is missing. Add your live key id in renderer.js.", true);
-      return;
-    }
-
-    try {
-      setPaymentStatus("Opening Razorpay Checkout...");
-      await loadRazorpayCheckout();
-
-      const checkout = new window.Razorpay({
-        key: getRazorpayKeyId(),
-        amount: PAYMENT_AMOUNT_SUBUNITS,
-        currency: "INR",
-        name: PAYEE_NAME,
-        description: PRODUCT_DESCRIPTION,
-        notes: {
-          product: "lifetime_pro",
-          app: "xcoretech_pc_optimizer",
-        },
-        prefill: {
-          email: SUPPORT_EMAIL,
-        },
-        theme: {
-          color: "#2563eb",
-        },
-        handler: async (response) => {
-          const paymentId = response && response.razorpay_payment_id ? response.razorpay_payment_id : "received";
-          setPaymentStatus("Payment successful. Activating Pro...");
-          trackActivity("razorpay_payment_success", paymentId);
-
-          try {
-            const result = window.api && typeof window.api.activatePaidLicense === "function"
-              ? await window.api.activatePaidLicense(response || {})
-              : { ok: false, error: "Activation bridge unavailable." };
-
-            if (result && result.ok) {
-              applyProState(true);
-              setPaymentStatus(`Pro activated. Razorpay Payment ID: ${paymentId}`);
-              setTimeout(() => {
-                togglePaymentModal(false);
-                toggleActivateModal(false);
-              }, 900);
-            } else {
-              setPaymentStatus(result && result.error ? result.error : "Payment received, but activation failed. Contact support with your payment ID.", true);
-            }
-          } catch (_) {
-            setPaymentStatus("Payment received, but activation failed. Contact support with your payment ID.", true);
-          }
-        },
-        modal: {
-          ondismiss: () => {
-            setPaymentStatus("Payment cancelled. You can try again when ready.");
-            trackActivity("razorpay_payment_dismissed");
-          },
-        },
-      });
-
-      checkout.on("payment.failed", (response) => {
-        const reason = response && response.error && response.error.description ? response.error.description : "Payment failed.";
-        setPaymentStatus(reason, true);
-        trackActivity("razorpay_payment_failed");
-      });
-
-      checkout.open();
-      trackActivity("razorpay_checkout_open");
-    } catch (err) {
-      setPaymentStatus(err && err.message ? err.message : "Unable to open Razorpay Checkout.", true);
-    }
-  }
-
-  function togglePaymentModal(show) {
-    if (!paymentModal) return;
-    paymentModal.classList.toggle("visible", !!show);
-    if (show) {
-      setPaymentStatus("Ready for secure card, UPI, wallet, and netbanking payment.");
-      trackActivity("payment_modal_open");
-    }
-  }
 
   // ── auto-start ─────────────────────────────────────────────────────────────
   async function refreshAutoStart() {
@@ -381,11 +218,6 @@
   async function bootstrap() {
     // Always show dashboard
     showFirstRun(false);
-
-    // Check License
-    window.api.getLicense().then(r => {
-      if (r && r.ok) applyProState(r.license.isPro);
-    }).catch(() => { });
 
     window.api.getSystemInfo().then(r => {
       if (r && r.ok) {
@@ -447,11 +279,6 @@
 
 
   autoStartChk.addEventListener("change", async () => {
-    if (autoStartContainer.classList.contains("proLockedFeature")) {
-      autoStartChk.checked = !autoStartChk.checked;
-      toggleActivateModal(true);
-      return;
-    }
     const desired = !!autoStartChk.checked;
     setStatus("Updating startup setting…");
     try {
@@ -669,37 +496,11 @@
     if (startupStatusEl) startupStatusEl.textContent = msg || "";
   }
 
-  function startupOverlayNode() {
-    return document.getElementById("startupOverlay");
-  }
-
-  function ensureStartupOverlay() {
-    if (!startupListEl) return null;
-    let overlay = startupOverlayNode();
-    if (!overlay) {
-      overlay = document.createElement("div");
-      overlay.id = "startupOverlay";
-      overlay.className = "lockOverlay";
-      overlay.innerHTML = "<div class=\"lockCard\"><span style=\"font-size: 24px; margin-bottom: 12px;\">🔒</span><div style=\"font-weight: 700; margin-bottom: 4px;\">Pro Feature Locked</div><div style=\"font-size: 11px; color: var(--text-muted);\">Activate Pro to manage startup programs.</div></div>";
-    }
-    if (autoStartContainer && !autoStartContainer.classList.contains("proLockedFeature")) {
-      overlay.classList.add("hidden");
-    } else {
-      overlay.classList.remove("hidden");
-    }
-    if (overlay.parentElement !== startupListEl) startupListEl.prepend(overlay);
-    return overlay;
-  }
-
   function replaceStartupContent(node) {
     if (!startupListEl) return;
-    const overlay = ensureStartupOverlay();
-    Array.from(startupListEl.children).forEach((child) => {
-      if (child !== overlay) child.remove();
-    });
+    startupListEl.textContent = "";
     if (node) startupListEl.appendChild(node);
   }
-
   function setStartupMessage(message) {
     const node = document.createElement("div");
     node.className = "startupEmpty";
@@ -834,60 +635,6 @@
       loadStartupPrograms();
     });
   }
-
-  if (goProBtn) goProBtn.addEventListener("click", () => toggleActivateModal(true));
-  if (closeActivateBtn) closeActivateBtn.addEventListener("click", () => toggleActivateModal(false));
-  if (activateModal) activateModal.addEventListener("click", (e) => { if (e.target === activateModal) toggleActivateModal(false); });
-  if (buyKeyBtn) buyKeyBtn.addEventListener("click", () => togglePaymentModal(true));
-  if (closePaymentBtn) closePaymentBtn.addEventListener("click", () => togglePaymentModal(false));
-  if (paymentModal) paymentModal.addEventListener("click", (e) => { if (e.target === paymentModal) togglePaymentModal(false); });
-  if (razorpayCheckoutBtn) razorpayCheckoutBtn.addEventListener("click", openRazorpayCheckout);
-  if (paymentEmailBtn) paymentEmailBtn.addEventListener("click", () => openExternalUrl(paymentSupportUrl));
-  document.addEventListener("keydown", (e) => {
-    if (e.key !== "Escape") return;
-    if (paymentModal && paymentModal.classList.contains("visible")) togglePaymentModal(false);
-  });
-
-  function toggleActivateModal(show) {
-    if (activateModal) activateModal.classList.toggle("visible", !!show);
-    if (show && licenseKeyInput) {
-      licenseKeyInput.value = "";
-      if (licenseErrorEl) licenseErrorEl.textContent = "";
-      licenseKeyInput.focus();
-    }
-  }
-
-  if (activateBtn) activateBtn.addEventListener("click", async () => {
-    const key = String(licenseKeyInput ? licenseKeyInput.value : "").trim();
-    if (!key) {
-      if (licenseErrorEl) licenseErrorEl.textContent = "Please enter a license key.";
-      return;
-    }
-
-    activateBtn.disabled = true;
-    if (licenseErrorEl) licenseErrorEl.textContent = "Verifying securely...";
-
-    try {
-      const r = await window.api.verifyLicense(key);
-      if (r && r.ok) {
-        applyProState(true);
-        if (licenseErrorEl) {
-          licenseErrorEl.style.color = "var(--accent-primary)";
-          licenseErrorEl.textContent = r.msg;
-        }
-        setTimeout(() => toggleActivateModal(false), 1500);
-      } else {
-        if (licenseErrorEl) {
-          licenseErrorEl.style.color = "var(--accent-danger)";
-          licenseErrorEl.textContent = r && r.error ? r.error : "Verification failed.";
-        }
-      }
-    } catch (err) {
-      if (licenseErrorEl) licenseErrorEl.textContent = "Connection error during verification.";
-    } finally {
-      activateBtn.disabled = false;
-    }
-  });
 
   // ── init ───────────────────────────────────────────────────────────────────
   function init() {

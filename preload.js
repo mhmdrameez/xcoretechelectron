@@ -22,13 +22,8 @@ contextBridge.exposeInMainWorld("api", {
   setAutoStart:       (en)          => ipcRenderer.invoke("autostart:set", !!en),
   getStats:           ()            => ipcRenderer.invoke("stats:get"),
   getSystemInfo:      ()            => ipcRenderer.invoke("system:get"),
-  getLicense:         ()            => ipcRenderer.invoke("license:get"),
-  verifyLicense:      (k)           => ipcRenderer.invoke("license:verify", k),
-  activatePaidLicense:(payment)     => ipcRenderer.invoke("license:activatePaid", payment || {}),
   getCounts:          ()            => ipcRenderer.invoke("analytics:getCounts"),
   trackEvent:         (p)           => ipcRenderer.invoke("analytics:track", p || {}),
-  openExternal:       (url)         => ipcRenderer.invoke("app:openExternal", url),
-
   updateInstall:      ()            => ipcRenderer.invoke("update:install"),
   updateCheck:        ()            => ipcRenderer.invoke("update:check"),
   getStartupList:     ()            => ipcRenderer.invoke("startup:list"),

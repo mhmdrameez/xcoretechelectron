@@ -15,7 +15,7 @@ test.describe('UI Structure Extra Coverage', () => {
   });
 
   test('primary header actions are visible', async () => {
-    await expect(window.locator('#goProBtn')).toBeVisible();
+    await expect(window.locator('#proBadge')).toHaveText('PRO');
     await expect(window.locator('#scanBtn')).toBeVisible();
     await expect(window.locator('#cleanBtn')).toBeVisible();
   });

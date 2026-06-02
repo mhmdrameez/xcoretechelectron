@@ -18,17 +18,8 @@ test.describe('Technician Mode Features', () => {
     // Check if the RAM Boost button is visible and not disabled
     const ramBtn = window.locator('#techRamBtn');
     
-    // We can only click it if the lock overlay isn't blocking it.
-    // In dev mode or activated pro mode, the overlay might be hidden.
-    const lockOverlay = window.locator('#techOverlay');
     // Wait for the app to finish initialization
     await window.waitForTimeout(2000);
-    const isLocked = await lockOverlay.evaluate((node) => window.getComputedStyle(node).pointerEvents !== 'none' && !node.classList.contains('hidden'));
-    
-    if (isLocked) {
-      test.skip('Technician mode is locked. Please activate Pro to run this test.');
-      return;
-    }
 
     await ramBtn.click();
 
@@ -40,13 +31,6 @@ test.describe('Technician Mode Features', () => {
   test('Auto Fix functionality', async () => {
     const autoBtn = window.locator('#techAutoBtn');
     
-    const lockOverlay = window.locator('#techOverlay');
-    const isLocked = await lockOverlay.evaluate((node) => window.getComputedStyle(node).pointerEvents !== 'none' && !node.classList.contains('hidden'));
-    if (isLocked) {
-      test.skip('Technician mode is locked.');
-      return;
-    }
-
     await autoBtn.click();
     
     const progEl = window.locator('#techAutoProg');
