@@ -650,6 +650,220 @@
     });
   }
 
+  // ── Large files ─────────────────────────────────────────────────────────────
+  const largeRootEl = el("largeRoot");
+  const largeMinEl = el("largeMin");
+  const largeScanBtn = el("largeScanBtn");
+  const largeStopBtn = el("largeStopBtn");
+  const largeStatusEl = el("largeStatus");
+  const largeResultsEl = el("largeResults");
+  const largeListEl = el("largeList");
+  const largeSelectAllEl = el("largeSelectAll");
+  const largeSelInfoEl = el("largeSelInfo");
+  const largeTrashBtn = el("largeTrashBtn");
+  const largeDeleteBtn = el("largeDeleteBtn");
+
+  let largeItems = [];             // { path, name, size, modified }
+  const largeSelected = new Set(); // paths
+  let largeBusy = false;
+
+  const dateFmt = new Intl.DateTimeFormat(undefined, { year: "numeric", month: "short", day: "numeric" });
+  function dirOf(p) { const i = p.lastIndexOf("\\"); return i > 0 ? p.slice(0, i) : p; }
+
+  function setLargeStatus(t) { if (largeStatusEl) largeStatusEl.textContent = t || ""; }
+
+  function updateLargeSelection() {
+    let bytes = 0;
+    for (const it of largeItems) if (largeSelected.has(it.path)) bytes += it.size;
+    const n = largeSelected.size;
+    if (largeSelInfoEl) largeSelInfoEl.textContent = n ? `${n} selected · ${formatBytes(bytes)}` : "Nothing selected";
+    if (largeTrashBtn) largeTrashBtn.disabled = largeBusy || !n;
+    if (largeDeleteBtn) largeDeleteBtn.disabled = largeBusy || !n;
+    if (largeSelectAllEl) {
+      largeSelectAllEl.checked = n > 0 && n === largeItems.length;
+      largeSelectAllEl.indeterminate = n > 0 && n < largeItems.length;
+    }
+  }
+
+  function renderLargeList() {
+    if (!largeListEl) return;
+    if (largeResultsEl) largeResultsEl.hidden = false;
+    largeListEl.textContent = "";
+    if (!largeItems.length) {
+      const empty = document.createElement("div");
+      empty.className = "largeEmpty";
+      empty.textContent = "No files that big were found here.";
+      largeListEl.appendChild(empty);
+      updateLargeSelection();
+      return;
+    }
+    const frag = document.createDocumentFragment();
+    for (const it of largeItems) {
+      const row = document.createElement("div");
+      row.className = "largeRow";
+      row.dataset.path = it.path;
+
+      const checkWrap = document.createElement("label");
+      checkWrap.className = "largeCheck";
+      const chk = document.createElement("input");
+      chk.type = "checkbox";
+      chk.checked = largeSelected.has(it.path);
+      chk.setAttribute("aria-label", `Select ${it.name}`);
+      checkWrap.appendChild(chk);
+
+      const file = document.createElement("div");
+      file.className = "largeFile";
+      const name = document.createElement("div");
+      name.className = "largeName";
+      name.textContent = it.name;
+      name.title = it.path;
+      const dir = document.createElement("div");
+      dir.className = "largeDir";
+      dir.textContent = dirOf(it.path);
+      dir.title = dirOf(it.path);
+      file.appendChild(name);
+      file.appendChild(dir);
+
+      const size = document.createElement("div");
+      size.className = "largeSize";
+      size.textContent = formatBytes(it.size);
+
+      const date = document.createElement("div");
+      date.className = "largeDate";
+      date.textContent = it.modified ? dateFmt.format(new Date(it.modified)) : "";
+
+      const show = document.createElement("button");
+      show.className = "link largeShow";
+      show.textContent = "Show in folder";
+
+      row.append(checkWrap, file, size, date, show);
+      frag.appendChild(row);
+    }
+    largeListEl.appendChild(frag);
+    updateLargeSelection();
+  }
+
+  function setLargeBusy(busy) {
+    largeBusy = busy;
+    if (largeScanBtn) {
+      largeScanBtn.disabled = busy || !largeRootEl || !largeRootEl.value;
+      largeScanBtn.style.display = busy ? "none" : "";
+    }
+    if (largeStopBtn) largeStopBtn.style.display = busy ? "" : "none";
+    if (largeRootEl) largeRootEl.disabled = busy || !largeRootEl.options.length;
+    if (largeMinEl) largeMinEl.disabled = busy;
+    updateLargeSelection();
+  }
+
+  async function loadLargeRoots() {
+    if (!largeRootEl) return;
+    try {
+      const r = await window.api.largeRoots();
+      const roots = (r && r.ok && Array.isArray(r.roots)) ? r.roots : [];
+      largeRootEl.textContent = "";
+      for (const root of roots) {
+        const opt = document.createElement("option");
+        opt.value = root.id;
+        opt.textContent = root.kind === "drive" && root.size
+          ? `${root.label} (${formatBytes(root.free)} free of ${formatBytes(root.size)})`
+          : `${root.label} (${root.path})`;
+        largeRootEl.appendChild(opt);
+      }
+      if (!roots.length) setLargeStatus("Couldn't list your drives.");
+    } catch (_) {
+      setLargeStatus("Couldn't list your drives.");
+    }
+    setLargeBusy(false);
+  }
+
+  async function runLargeScan() {
+    if (largeBusy || !largeRootEl || !largeRootEl.value) return;
+    largeItems = [];
+    largeSelected.clear();
+    if (largeResultsEl) largeResultsEl.hidden = true;
+    setLargeBusy(true);
+    setLargeStatus("Searching…");
+    trackActivity("large_scan_start");
+    try {
+      const r = await window.api.largeScan(largeRootEl.value, Number(largeMinEl ? largeMinEl.value : 104857600));
+      if (!r || !r.ok) {
+        setLargeStatus(r && r.error ? r.error : "Search failed.");
+        return;
+      }
+      largeItems = Array.isArray(r.items) ? r.items : [];
+      const shown = largeItems.length < (r.found || 0) ? ` Showing the ${largeItems.length} biggest.` : "";
+      setLargeStatus(`${r.cancelled ? "Stopped. " : ""}Checked ${Number(r.scannedFiles || 0).toLocaleString()} files, found ${r.found || 0}.${shown}`);
+      renderLargeList();
+      trackActivity("large_scan_ok", `${r.found || 0} files`);
+    } catch (_) {
+      setLargeStatus("Search failed.");
+    } finally {
+      setLargeBusy(false);
+    }
+  }
+
+  async function removeSelectedLarge(permanent) {
+    if (largeBusy || !largeSelected.size) return;
+    const paths = largeItems.filter((it) => largeSelected.has(it.path)).map((it) => it.path);
+    setLargeBusy(true);
+    try {
+      const r = await window.api.largeDelete(paths, permanent);
+      if (!r || r.cancelled) return;
+      if (!r.ok) { setLargeStatus(r.error || "Couldn't remove the files."); return; }
+      const removed = new Set(r.removed || []);
+      largeItems = largeItems.filter((it) => !removed.has(it.path));
+      for (const p of removed) largeSelected.delete(p);
+      let msg = `${permanent ? "Deleted" : "Moved to the Recycle Bin"}: ${removed.size} file(s), ${formatBytes(r.removedBytes || 0)}.`;
+      if (r.failed && r.failed.length) msg += ` ${r.failed.length} couldn't be removed (${r.failed[0].error}).`;
+      setLargeStatus(msg);
+      renderLargeList();
+      trackActivity(permanent ? "large_delete" : "large_trash", formatBytes(r.removedBytes || 0));
+    } catch (_) {
+      setLargeStatus("Couldn't remove the files.");
+    } finally {
+      setLargeBusy(false);
+    }
+  }
+
+  function initLargeFiles() {
+    if (!window.api.largeRoots || !largeRootEl) {
+      const section = el("largeSection");
+      if (section) section.hidden = true;
+      return;
+    }
+    if (largeScanBtn) largeScanBtn.addEventListener("click", runLargeScan);
+    if (largeStopBtn) largeStopBtn.addEventListener("click", () => {
+      setLargeStatus("Stopping…");
+      window.api.largeCancel().catch(() => { });
+    });
+    if (largeTrashBtn) largeTrashBtn.addEventListener("click", () => removeSelectedLarge(false));
+    if (largeDeleteBtn) largeDeleteBtn.addEventListener("click", () => removeSelectedLarge(true));
+    if (largeSelectAllEl) largeSelectAllEl.addEventListener("change", () => {
+      largeSelected.clear();
+      if (largeSelectAllEl.checked) for (const it of largeItems) largeSelected.add(it.path);
+      renderLargeList();
+    });
+    if (largeListEl) {
+      largeListEl.addEventListener("change", (e) => {
+        const row = e.target.closest(".largeRow");
+        if (!row || e.target.type !== "checkbox") return;
+        if (e.target.checked) largeSelected.add(row.dataset.path);
+        else largeSelected.delete(row.dataset.path);
+        updateLargeSelection();
+      });
+      largeListEl.addEventListener("click", (e) => {
+        if (!e.target.classList.contains("largeShow")) return;
+        const row = e.target.closest(".largeRow");
+        if (row) window.api.largeReveal(row.dataset.path).catch(() => { });
+      });
+    }
+    if (window.api.onLargeProgress) window.api.onLargeProgress((p) => {
+      if (!largeBusy || !p) return;
+      setLargeStatus(`Searching… ${Number(p.scannedFiles || 0).toLocaleString()} files checked, ${p.found || 0} found`);
+    });
+    loadLargeRoots();
+  }
+
   // ── init ───────────────────────────────────────────────────────────────────
   function init() {
     setButtons();
@@ -657,6 +871,7 @@
     bootstrap();
     refreshAutoStart();
     loadStartupPrograms(); // Auto-load on init
+    initLargeFiles();
 
     // Stats from main process (in-memory, no file read needed now)
     window.api.getStats().then(r => { if (r && r.ok && r.stats) updateImpactCards(r.stats); }).catch(() => { });

@@ -50,6 +50,7 @@
       "location.js",
       "updater.js",
       "technician.js",
+      "largeFiles.js",
       "index.html",
       "styles.css",
       "assets/**/*"

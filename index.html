@@ -72,6 +72,53 @@
       </label>
     </section>
 
+    <!-- Large files -->
+    <section class="card" id="largeSection">
+      <h2>Large files</h2>
+      <p class="muted sectionNote">Find the biggest files taking up space. Windows and program folders are left out.</p>
+
+      <div class="largeControls">
+        <label class="field">
+          <span>Look in</span>
+          <select id="largeRoot" disabled>
+            <option>Loading…</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Bigger than</span>
+          <select id="largeMin">
+            <option value="52428800">50 MB</option>
+            <option value="104857600" selected>100 MB</option>
+            <option value="524288000">500 MB</option>
+            <option value="1073741824">1 GB</option>
+            <option value="5368709120">5 GB</option>
+          </select>
+        </label>
+        <button id="largeScanBtn" class="btn primary" disabled>Find large files</button>
+        <button id="largeStopBtn" class="btn" style="display:none">Stop</button>
+      </div>
+
+      <div id="largeStatus" class="muted small largeStatus"></div>
+
+      <div id="largeResults" class="largeResults" hidden>
+        <div class="largeHead">
+          <label class="largeCheck"><input type="checkbox" id="largeSelectAll" aria-label="Select all files"></label>
+          <span class="largeColName">File</span>
+          <span class="largeColSize">Size</span>
+          <span class="largeColDate">Modified</span>
+          <span class="largeColAct"></span>
+        </div>
+        <div id="largeList" class="largeList"></div>
+        <div class="largeFoot">
+          <span id="largeSelInfo" class="muted small">Nothing selected</span>
+          <div class="actions">
+            <button id="largeDeleteBtn" class="btn" disabled>Delete permanently</button>
+            <button id="largeTrashBtn" class="btn primary" disabled>Move to Recycle Bin</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- History -->
     <section class="card">
       <h2>So far</h2>

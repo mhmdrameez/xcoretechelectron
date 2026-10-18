@@ -30,6 +30,13 @@ contextBridge.exposeInMainWorld("api", {
   setStartupEnabled:  (name, approvedKey, regFlag, enable) =>
     ipcRenderer.invoke("startup:setEnabled", { name, approvedKey, regFlag, enable }),
 
+  // ── large files ──────────────────────────────────────────────────────────
+  largeRoots:         ()            => ipcRenderer.invoke("large:roots"),
+  largeScan:          (rootId, minBytes) => ipcRenderer.invoke("large:scan", { rootId, minBytes }),
+  largeCancel:        ()            => ipcRenderer.invoke("large:cancel"),
+  largeReveal:        (filePath)    => ipcRenderer.invoke("large:reveal", filePath),
+  largeDelete:        (paths, permanent) => ipcRenderer.invoke("large:delete", { paths, permanent: !!permanent }),
+
   // ── technician ───────────────────────────────────────────────────────────
   techInternetFix:    ()            => ipcRenderer.invoke("tech:internetFix"),
   techRamBoost:       ()            => ipcRenderer.invoke("tech:ramBoost"),
@@ -49,4 +56,5 @@ contextBridge.exposeInMainWorld("api", {
   onUpdateDownloaded: (fn) => on("update:downloaded",fn),
   onUpdateStatus:     (fn) => on("update:status",    fn),
   onTechProgress:     (fn) => on("tech:progress",    fn),
+  onLargeProgress:    (fn) => on("large:progress",   fn),
 });

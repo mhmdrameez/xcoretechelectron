@@ -36,7 +36,7 @@ try {
   _a.commandLine.appendSwitch("v", "0");
 } catch (_) {}
 
-const { app, BrowserWindow, ipcMain, dialog, Tray, Menu, nativeImage, nativeTheme } = require("electron");
+const { app, BrowserWindow, ipcMain, dialog, Tray, Menu, nativeImage, nativeTheme, shell } = require("electron");
 const fs   = require("fs");
 const { exec }  = require("child_process");
 const path = require("path");
@@ -44,6 +44,7 @@ const path = require("path");
 // Lazy-load heavy modules — not needed until the user clicks something.
 let _scanner  = null; const scanner  = () => (_scanner  ||= require(path.join(__dirname, "scanner.js")));
 let _cleaner  = null; const cleaner  = () => (_cleaner  ||= require(path.join(__dirname, "cleaner.js")));
+let _largeFiles = null; const largeFiles = () => (_largeFiles ||= require(path.join(__dirname, "largeFiles.js")));
 let _updater  = null; const updater  = () => (_updater  ||= require(path.join(__dirname, "updater.js")));
 
 
@@ -51,7 +52,7 @@ const { getSystemInfo }  = require(path.join(__dirname, "systemInfo.js"));
 const { initAnalytics, sendEvent, getUserCounts } = require(path.join(__dirname, "analytics.js"));
 const { installCrashHandler }  = require(path.join(__dirname, "crashHandler.js"));
 const { primeLocation, getLocation } = require(path.join(__dirname, "location.js"));
-const { getAutoStartEnabled, setAutoStartEnabled, formatBytes, debounceMs } = require(path.join(__dirname, "utils.js"));
+const { getAutoStartEnabled, setAutoStartEnabled, formatBytes, debounceMs, isProbablyUnsafeSystemPath } = require(path.join(__dirname, "utils.js"));
 
 installCrashHandler(sendEvent);
 
@@ -63,6 +64,9 @@ let mainWindow       = null;
 let tray             = null;
 let isQuitting       = false;
 let currentScanCancel = null;
+let largeScanCancel  = null;
+let largeSearchRoots = [];
+let lastLargeFiles   = new Map(); // lower-case path -> item, from the last large-file scan
 let lastScanResult   = { files: [], directories: [], totalBytes: 0 };
 let autoCleanRunning = false;
 let cleanRunning     = false;
@@ -507,6 +511,108 @@ function setupIpc() {
       sendStatus(res.ok ? "Auto Fix complete." : "Auto Fix failed.");
       return res;
     } catch (e) { return { ok: false, error: String(e.message || e) }; }
+  });
+
+  // ── large files ────────────────────────────────────────────────────────────
+  ipcMain.handle("large:roots", async () => {
+    try {
+      largeSearchRoots = await largeFiles().listSearchRoots();
+      return { ok: true, roots: largeSearchRoots };
+    } catch (e) { return { ok: false, error: String(e.message || e), roots: [] }; }
+  });
+
+  ipcMain.handle("large:scan", async (_e, opts) => {
+    if (largeScanCancel) return { ok: false, error: "Already searching." };
+    const o = (opts && typeof opts === "object") ? opts : {};
+    // only search places we offered — never an arbitrary path from the page
+    const root = largeSearchRoots.find((r) => r.id === o.rootId);
+    if (!root) return { ok: false, error: "Choose where to search first." };
+    const minBytes = Math.max(1, Number(o.minBytes) || 0);
+
+    if (root.id === "fixture") {
+      try { fs.mkdirSync(root.path, { recursive: true }); } catch (_) {}
+    }
+
+    const cancel = { cancelled: false };
+    largeScanCancel = () => { cancel.cancelled = true; };
+    sendStatus(`Looking for large files in ${root.path}…`);
+    try {
+      const progressSend = debounceMs((p) => send("large:progress", p), 200);
+      const result = await largeFiles().findLargeFiles(root.path, { minBytes, cancel, onProgress: progressSend });
+      lastLargeFiles = new Map(result.items.map((i) => [i.path.toLowerCase(), i]));
+      sendStatus(result.cancelled
+        ? "Large file search stopped."
+        : `Found ${result.found} file(s) of ${formatBytes(minBytes)} or more.`);
+      return { ok: true, ...result };
+    } catch (e) {
+      return { ok: false, error: String(e.message || e), items: [] };
+    } finally {
+      largeScanCancel = null;
+    }
+  });
+
+  ipcMain.handle("large:cancel", () => {
+    if (largeScanCancel) largeScanCancel();
+    return { ok: true };
+  });
+
+  ipcMain.handle("large:reveal", (_e, filePath) => {
+    const item = lastLargeFiles.get(String(filePath || "").toLowerCase());
+    if (!item) return { ok: false, error: "Unknown file." };
+    try { shell.showItemInFolder(item.path); return { ok: true }; }
+    catch (e) { return { ok: false, error: String(e.message || e) }; }
+  });
+
+  ipcMain.handle("large:delete", async (_e, req) => {
+    const r = (req && typeof req === "object") ? req : {};
+    const permanent = !!r.permanent;
+    // only files that came from our own last scan, and never system locations
+    const items = toUniquePathList(Array.isArray(r.paths) ? r.paths : [])
+      .map((p) => lastLargeFiles.get(p.toLowerCase()))
+      .filter((i) => i && !isProbablyUnsafeSystemPath(i.path));
+    if (!items.length) return { ok: false, error: "No files selected." };
+
+    const total = items.reduce((n, i) => n + i.size, 0);
+    if (!process.env.PLAYWRIGHT_TEST) {
+      const res = await dialog.showMessageBox(mainWindow, permanent ? {
+        type: "warning", title: "Delete permanently",
+        message: `Permanently delete ${items.length} file(s) (${formatBytes(total)})?`,
+        detail: "They will not go to the Recycle Bin and can't be restored.",
+        buttons: ["Cancel", "Delete permanently"], defaultId: 0, cancelId: 0, noLink: true,
+      } : {
+        type: "question", title: "Move to Recycle Bin",
+        message: `Move ${items.length} file(s) (${formatBytes(total)}) to the Recycle Bin?`,
+        detail: "You can restore them from the Recycle Bin. The space is freed when you empty it.",
+        buttons: ["Cancel", "Move to Recycle Bin"], defaultId: 1, cancelId: 0, noLink: true,
+      });
+      if (res.response !== 1) return { ok: false, cancelled: true };
+    }
+
+    const removed = [];
+    const failed  = [];
+    for (const item of items) {
+      try {
+        if (permanent) {
+          try { await fs.promises.unlink(item.path); }
+          catch (err) {
+            if (err && err.code === "EPERM") {     // read-only file
+              await fs.promises.chmod(item.path, 0o666);
+              await fs.promises.unlink(item.path);
+            } else throw err;
+          }
+        } else {
+          await shell.trashItem(item.path);
+        }
+        removed.push(item.path);
+        lastLargeFiles.delete(item.path.toLowerCase());
+      } catch (e) {
+        failed.push({ path: item.path, error: e && e.code === "EBUSY" ? "File is in use." : String(e.message || e) });
+      }
+    }
+    const removedBytes = items.filter((i) => removed.includes(i.path)).reduce((n, i) => n + i.size, 0);
+    sendStatus(`${permanent ? "Deleted" : "Moved to Recycle Bin"}: ${removed.length} file(s), ${formatBytes(removedBytes)}.` +
+      (failed.length ? ` ${failed.length} couldn't be removed.` : ""));
+    return { ok: true, permanent, removed, removedBytes, failed };
   });
 
   ipcMain.handle("scan:cancel", () => {
