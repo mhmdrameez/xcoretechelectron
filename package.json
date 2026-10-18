@@ -80,7 +80,8 @@
       "createStartMenuShortcut": true,
       "shortcutName": "XCoreTech PC Optimizer",
       "deleteAppDataOnUninstall": true,
-      "license": "license.txt"
+      "license": "license.txt",
+      "include": "installer/installer.nsh"
     }
   },
   "dependencies": {
