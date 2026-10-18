@@ -5,37 +5,21 @@ const fs   = (() => { try { return require("original-fs"); } catch (_) { return 
 const os   = require("os");
 const path = require("path");
 const { execFile } = require("child_process");
+const { getPlatform } = require(path.join(__dirname, "platform.js"));
 
 // ─── constants ────────────────────────────────────────────────────────────────
 const WALK_CONCURRENCY = 8;
 const REPORT_INTERVAL  = 200;   // ms between progress pushes
 const MAX_RESULTS      = 500;   // keep only the biggest N files
 
-// Folders directly under a drive root that belong to Windows or installed
-// programs. Deleting anything in them can break the system, so never list them.
-const SKIP_AT_DRIVE_ROOT = new Set([
-  "windows", "program files", "program files (x86)", "programdata",
-  "$recycle.bin", "system volume information", "recovery", "$winreagent",
-  "config.msi", "$windows.~bt", "$windows.~ws", "$sysreset", "msocache",
-  "perflogs", "boot", "documents and settings",
-]);
-
-// System files at a drive root (page file, hibernation file, …).
-const SKIP_FILES_AT_DRIVE_ROOT = new Set([
-  "pagefile.sys", "hiberfil.sys", "swapfile.sys", "dumpstack.log", "dumpstack.log.tmp",
-  "bootmgr", "bootnxt",
-]);
-
-function isDriveRoot(p) {
-  return /^[a-z]:\\?$/i.test(String(p || ""));
-}
-
+// System and program folders are never listed; the rules for each OS are in
+// platform.js (e.g. C:\Windows, /System, /usr).
 function isSkippedDir(parent, name) {
-  return isDriveRoot(parent) && SKIP_AT_DRIVE_ROOT.has(name.toLowerCase());
+  return getPlatform().isSkippedDir(parent, name);
 }
 
 function isSkippedFile(parent, name) {
-  return isDriveRoot(parent) && SKIP_FILES_AT_DRIVE_ROOT.has(name.toLowerCase());
+  return getPlatform().isSkippedFile(parent, name);
 }
 
 // ─── result set — keeps the biggest MAX_RESULTS files ─────────────────────────
@@ -86,7 +70,7 @@ async function findLargeFiles(root, { minBytes, cancel, onProgress, maxResults }
   }
 
   async function processDir(dir) {
-    const key = dir.toLowerCase();
+    const key = getPlatform().pathKey(dir);
     if (visited.has(key)) return;
     visited.add(key);
     currentDir = dir;
@@ -147,7 +131,7 @@ async function findLargeFiles(root, { minBytes, cancel, onProgress, maxResults }
 }
 
 // ─── where the user can search ────────────────────────────────────────────────
-function listFixedDrives() {
+function listWindowsDrives() {
   return new Promise((resolve) => {
     const script = "Get-CimInstance Win32_LogicalDisk -Filter 'DriveType=3' | " +
       "ForEach-Object { '{0}|{1}|{2}' -f $_.DeviceID, $_.Size, $_.FreeSpace }";
@@ -167,11 +151,43 @@ function listFixedDrives() {
   });
 }
 
+// Parses `df -Pk` output into { mount, size, free } (bytes).
+function parseDf(stdout) {
+  const lines = String(stdout || "").split(/\r?\n/).slice(1).filter(Boolean);
+  const out = [];
+  for (const line of lines) {
+    // "Filesystem 1024-blocks Used Available Capacity Mounted-on"; the mount
+    // point is everything after the capacity column (it may contain spaces)
+    const m = /^\S+\s+(\d+)\s+\d+\s+(\d+)\s+\d+%\s+(.+)$/.exec(line.trim());
+    if (m) out.push({ mount: m[3], size: Number(m[1]) * 1024, free: Number(m[2]) * 1024 });
+  }
+  return out;
+}
+
+// The system disk plus external/extra drives, ignoring pseudo and system mounts.
+function isUserMount(mount, plat) {
+  if (mount === "/") return true;
+  if (plat.isMac) return mount.startsWith("/Volumes/");
+  return /^\/(media|mnt|run\/media)\//.test(mount);
+}
+
+function listPosixDrives(plat) {
+  return new Promise((resolve) => {
+    try {
+      execFile("df", ["-Pk"], { timeout: 10000 }, (err, stdout) => {
+        if (err && !stdout) return resolve([]);
+        resolve(parseDf(stdout).filter((d) => isUserMount(d.mount, plat)));
+      });
+    } catch (_) { resolve([]); }
+  });
+}
+
 function getFixturePath() {
   return path.join(os.tmpdir(), "xcoretech-playwright-largefiles-fixture");
 }
 
 async function listSearchRoots() {
+  const plat = getPlatform();
   const roots = [];
   if (process.env.PLAYWRIGHT_TEST) {
     roots.push({ id: "fixture", kind: "folder", label: "Test folder", path: getFixturePath() });
@@ -179,15 +195,29 @@ async function listSearchRoots() {
   const home = os.homedir();
   if (home) roots.push({ id: "home", kind: "folder", label: "Your files", path: home });
 
-  let drives = await listFixedDrives();
-  if (!drives.length) drives = [{ letter: "C:", size: 0, free: 0 }];
-  for (const d of drives) {
-    roots.push({
-      id: `drive-${d.letter[0].toLowerCase()}`, kind: "drive",
-      label: `Whole drive ${d.letter}`, path: `${d.letter}\\`,
-      size: d.size, free: d.free,
-    });
+  if (plat.isWin) {
+    let drives = await listWindowsDrives();
+    if (!drives.length) drives = [{ letter: "C:", size: 0, free: 0 }];
+    for (const d of drives) {
+      roots.push({
+        id: `drive-${d.letter[0].toLowerCase()}`, kind: "drive",
+        label: `Whole drive ${d.letter}`, path: `${d.letter}\\`,
+        size: d.size, free: d.free,
+      });
+    }
+    return roots;
   }
+
+  let drives = await listPosixDrives(plat);
+  if (!drives.some((d) => d.mount === "/")) drives.unshift({ mount: "/", size: 0, free: 0 });
+  drives.forEach((d, i) => {
+    const isSystem = d.mount === "/";
+    roots.push({
+      id: isSystem ? "drive-root" : `drive-${i}`, kind: "drive",
+      label: isSystem ? "Whole disk" : `Drive ${path.basename(d.mount)}`,
+      path: d.mount, size: d.size, free: d.free,
+    });
+  });
   return roots;
 }
 
@@ -196,5 +226,6 @@ module.exports = {
   listSearchRoots,
   getFixturePath,
   isSkippedDir,
+  parseDf,
   MAX_RESULTS,
 };

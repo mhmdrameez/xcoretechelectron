@@ -298,6 +298,8 @@ body.busy .busyOverlay { display: flex; }
 }
 
 .hidden { display: none !important; }
+/* author display rules (e.g. .tool { display: flex }) would otherwise beat the hidden attribute */
+[hidden] { display: none !important; }
 
 @media (max-width: 720px) {
   .history { grid-template-columns: repeat(2, 1fr); }

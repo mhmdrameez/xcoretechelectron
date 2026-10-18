@@ -66,7 +66,7 @@ test.describe('Developer caches (module)', () => {
 
     const runner = fakeRunner();
     const dev = createDevCaches({
-      env: {}, localAppData: local, userProfile: path.join(root, 'home'), tempDir: temp,
+      platform: 'win32', env: {}, localAppData: local, userProfile: path.join(root, 'home'), tempDir: temp,
       which: async () => null, run: runner.run,
     });
     const targets = await dev.detect();
@@ -108,7 +108,7 @@ test.describe('Developer caches (module)', () => {
     const runner = fakeRunner();
     const tools = { npm: 'C:\\tools\\npm.cmd', uv: 'C:\\tools\\uv.exe' };
     const dev = createDevCaches({
-      env: {}, localAppData: local, userProfile: home, tempDir: path.join(root, 'temp'),
+      platform: 'win32', env: {}, localAppData: local, userProfile: home, tempDir: path.join(root, 'temp'),
       which: async (t) => tools[t] || null, run: runner.run,
     });
     const byId = Object.fromEntries((await dev.detect()).map((t) => [t.id, t]));

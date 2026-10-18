@@ -14,7 +14,8 @@
     "prerelease": "node pre-dist.js",
     "release": "electron-builder --publish always",
     "test": "playwright test",
-    "test:stress": "playwright test tests/stress.spec.js"
+    "test:stress": "playwright test tests/stress.spec.js",
+    "test:ci": "playwright test tests/platform.spec.js tests/static-contracts.spec.js tests/core.spec.js tests/dashboard.spec.js tests/full-version.spec.js tests/ipc-ui-extra.spec.js tests/ui-structure-extra.spec.js tests/update.spec.js tests/large-files.spec.js tests/dev-caches.spec.js"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",
@@ -44,6 +45,8 @@
       "scanner.js",
       "cleaner.js",
       "utils.js",
+      "startupItems.js",
+      "platform.js",
       "systemInfo.js",
       "analytics.js",
       "crashHandler.js",
@@ -82,6 +85,59 @@
       "deleteAppDataOnUninstall": true,
       "license": "license.txt",
       "include": "installer/installer.nsh"
+    },
+    "afterPack": "installer/after-pack.js",
+    "mac": {
+      "category": "public.app-category.utilities",
+      "icon": "assets/icon-1024.png",
+      "identity": null,
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
+      "artifactName": "XCoreTech-PC-Optimizer-${version}-mac-${arch}.${ext}",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ]
+    },
+    "linux": {
+      "icon": "assets/icon-1024.png",
+      "category": "Utility",
+      "executableName": "xcoretech-pc-optimizer",
+      "maintainer": "XCoreTech Team <mhmdrameez@users.noreply.github.com>",
+      "synopsis": "Clean junk files, find large files and tidy developer caches",
+      "artifactName": "XCoreTech-PC-Optimizer-${version}-linux-${arch}.${ext}",
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "rpm",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
     }
   },
   "dependencies": {

@@ -30,7 +30,7 @@
       <div class="cleanupTop">
         <div>
           <h1>Clean up junk files</h1>
-          <p class="muted">Temporary files, browser caches and leftovers Windows doesn't need.</p>
+          <p class="muted" data-txt="cleanupDesc">Temporary files, browser caches and leftovers Windows doesn't need.</p>
         </div>
         <div class="actions">
           <button id="scanBtn" class="btn">Scan</button>
@@ -68,14 +68,14 @@
 
       <label class="checkbox" id="autoStartContainer">
         <input id="autoStartChk" type="checkbox" />
-        <span>Clean up automatically when Windows starts</span>
+        <span data-txt="autostart">Clean up automatically when Windows starts</span>
       </label>
     </section>
 
     <!-- Large files -->
     <section class="card" id="largeSection">
       <h2>Large files</h2>
-      <p class="muted sectionNote">Find the biggest files taking up space. Windows and program folders are left out.</p>
+      <p class="muted sectionNote" data-txt="largeNote">Find the biggest files taking up space. Windows and program folders are left out.</p>
 
       <div class="largeControls">
         <label class="field">
@@ -176,18 +176,18 @@
     <!-- Quick fixes -->
     <section class="card" id="technicianSection">
       <h2>Quick fixes</h2>
-      <p class="muted sectionNote">Some fixes need the app to be run as administrator to work fully.</p>
+      <p class="muted sectionNote" data-txt="techNote">Some fixes need the app to be run as administrator to work fully.</p>
 
       <ul class="toolList">
-        <li class="tool">
+        <li class="tool" data-tool="internet">
           <div class="toolText">
             <div class="toolName">Internet fix</div>
-            <div class="toolDesc">Clears the DNS cache and resets Winsock and the IP settings. Your connection drops for a few seconds.</div>
+            <div class="toolDesc" data-txt="internetDesc">Clears the DNS cache and resets Winsock and the IP settings. Your connection drops for a few seconds.</div>
             <div class="toolProg" id="techInternetProg"></div>
           </div>
           <button id="techInternetBtn" class="btn">Run Fix</button>
         </li>
-        <li class="tool">
+        <li class="tool" data-tool="ram">
           <div class="toolText">
             <div class="toolName">Free up memory</div>
             <div class="toolDesc">Asks running apps to give back memory they aren't using.</div>
@@ -195,7 +195,7 @@
           </div>
           <button id="techRamBtn" class="btn">Optimize</button>
         </li>
-        <li class="tool">
+        <li class="tool" data-tool="autofix">
           <div class="toolText">
             <div class="toolName">Windows Update &amp; printer fix</div>
             <div class="toolDesc">Restarts update and print services, clears stuck downloads and print jobs, rebuilds the icon cache.</div>
@@ -203,7 +203,7 @@
           </div>
           <button id="techAutoBtn" class="btn">Repair</button>
         </li>
-        <li class="tool">
+        <li class="tool" data-tool="full">
           <div class="toolText">
             <div class="toolName">Run all three</div>
             <div class="toolDesc">Runs the fixes above one after another.</div>
@@ -217,7 +217,7 @@
     <!-- Startup apps -->
     <section class="card" id="startupSection">
       <div class="sectionHead">
-        <h2>Apps that start with Windows</h2>
+        <h2 data-txt="startupTitle">Apps that start with Windows</h2>
         <button class="btn small" id="startupRefreshBtn">Refresh</button>
       </div>
       <p class="muted sectionNote">Turning an app off here only stops it from opening at sign-in. Nothing is uninstalled.</p>
@@ -233,14 +233,14 @@
       <h2>This PC</h2>
       <dl class="pcInfo">
         <div><dt>Name</dt><dd id="sysDevice">-</dd></div>
-        <div><dt>Windows</dt><dd id="sysOs">-</dd></div>
+        <div><dt data-txt="osLabel">Windows</dt><dd id="sysOs">-</dd></div>
         <div><dt>Processor</dt><dd id="sysCpu">-</dd></div>
         <div><dt>Memory</dt><dd><span id="sysFree">-</span> free of <span id="sysRam">-</span></dd></div>
       </dl>
     </section>
 
     <footer class="footer">
-      <span>© 2024 XCoreTech Team</span>
+      <span>© <span id="copyrightYear">2026</span> XCoreTech Team</span>
       <span>Version 1.3.32</span>
     </footer>
   </div>

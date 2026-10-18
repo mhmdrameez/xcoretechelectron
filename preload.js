@@ -22,13 +22,13 @@ contextBridge.exposeInMainWorld("api", {
   setAutoStart:       (en)          => ipcRenderer.invoke("autostart:set", !!en),
   getStats:           ()            => ipcRenderer.invoke("stats:get"),
   getSystemInfo:      ()            => ipcRenderer.invoke("system:get"),
+  getPlatform:        ()            => ipcRenderer.invoke("platform:get"),
   getCounts:          ()            => ipcRenderer.invoke("analytics:getCounts"),
   trackEvent:         (p)           => ipcRenderer.invoke("analytics:track", p || {}),
   updateInstall:      ()            => ipcRenderer.invoke("update:install"),
   updateCheck:        ()            => ipcRenderer.invoke("update:check"),
   getStartupList:     ()            => ipcRenderer.invoke("startup:list"),
-  setStartupEnabled:  (name, approvedKey, regFlag, enable) =>
-    ipcRenderer.invoke("startup:setEnabled", { name, approvedKey, regFlag, enable }),
+  setStartupEnabled:  (id, enable)  => ipcRenderer.invoke("startup:setEnabled", { id, enable: !!enable }),
 
   // ── large files ──────────────────────────────────────────────────────────
   largeRoots:         ()            => ipcRenderer.invoke("large:roots"),

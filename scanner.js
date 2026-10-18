@@ -4,6 +4,7 @@
 const fs   = (() => { try { return require("original-fs"); } catch (_) { return require("fs"); } })();
 const os   = require("os");
 const path = require("path");
+const { getPlatform } = require(path.join(__dirname, "platform.js"));
 
 // ─── constants ────────────────────────────────────────────────────────────────
 const WALK_CONCURRENCY = 6;    // concurrent readdirs — lower = less OS handle pressure
@@ -131,18 +132,7 @@ function getDefaultTargets() {
     return [fixture];
   }
 
-  const temp  = envPath("TEMP") || envPath("TMP");
-  const local = envPath("LOCALAPPDATA");
-  const win   = envPath("WINDIR") || "C:\\Windows";
-  const t = [];
-  if (temp)  t.push(temp);
-  t.push("C:\\Windows\\Temp");
-  t.push(safeJoin(win,   "Prefetch"));
-  if (local) {
-    t.push(safeJoin(local, "Google",    "Chrome", "User Data", "Default", "Cache"));
-    t.push(safeJoin(local, "Microsoft", "Edge",   "User Data", "Default", "Cache"));
-  }
-  return t.filter(Boolean);
+  return getPlatform().junkTargets().filter(Boolean);
 }
 
 async function scanDefaultTargets(opts) {

@@ -39,7 +39,10 @@ async function isGone(p) {
 
 // ─── attribute strip ──────────────────────────────────────────────────────────
 
+const IS_WIN = process.platform === "win32";
+
 function clearAttr(targetPath, isDir) {
+  if (!IS_WIN) return Promise.resolve({ ok: false });
   const target = isDir ? `${targetPath}\\*` : targetPath;
   return execCmd("cmd.exe", ["/d", "/s", "/c", `attrib -r -h -s ${quote(target)}`]);
 }
@@ -55,6 +58,8 @@ async function forceDeleteFile(filePath) {
   await clearAttr(filePath, false);
   try { await fs.promises.unlink(filePath); return { ok: true, method: "unlink-attrib" }; } catch (_) {}
   if (await isGone(filePath)) return { ok: true, method: "attrib-gone" };
+
+  if (!IS_WIN) return { ok: false, scheduled: false, error: "Failed to delete." };
 
   // 3. shell del
   const shell = await execCmd("cmd.exe", ["/d", "/s", "/c", `del /f /q ${quote(filePath)}`]);
@@ -82,6 +87,8 @@ async function forceDeleteDir(dirPath) {
   // 3. strip attributes, retry rmdir
   await clearAttr(dirPath, true);
   try { await fs.promises.rmdir(dirPath); return { ok: true, method: "rmdir-attrib" }; } catch (_) {}
+
+  if (!IS_WIN) return { ok: false, scheduled: false, error: "Failed to delete dir." };
 
   // 4. shell rd
   const shell = await execCmd("cmd.exe", ["/d", "/s", "/c", `rd /s /q ${quote(dirPath)}`]);

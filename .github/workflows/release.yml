@@ -1,0 +1,87 @@
+name: Release
+
+# Push a version tag to build Windows, macOS and Linux and attach them to a
+# draft GitHub release:
+#   1. bump "version" in package.json (node pre-dist.js) and commit
+#   2. git tag v1.2.3 && git push origin v1.2.3
+#   3. check the draft on the Releases page and click "Publish release"
+# Uses the workflow's own GITHUB_TOKEN; no personal token is needed.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  draft:
+    name: Create draft release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read version
+        id: v
+        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Check the tag matches package.json
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          if [ "${GITHUB_REF_NAME}" != "v${{ steps.v.outputs.version }}" ]; then
+            echo "Tag ${GITHUB_REF_NAME} does not match package.json version ${{ steps.v.outputs.version }}" >&2
+            exit 1
+          fi
+
+      # One job creates the draft first, so the three build jobs don't race to
+      # create it; electron-builder then uploads into this draft.
+      - name: Create the draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="v${{ steps.v.outputs.version }}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists"
+          else
+            gh release create "$TAG" --draft --title "${{ steps.v.outputs.version }}" --notes-file release-notes.md --target "$GITHUB_SHA"
+          fi
+
+  build:
+    name: Build (${{ matrix.os }})
+    needs: draft
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            args: --win
+          - os: macos-latest
+            args: --mac
+          - os: ubuntu-latest
+            args: --linux
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install rpm tools (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y rpm
+
+      - name: Build and upload
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # no Apple certificate yet: the app gets an ad-hoc signature
+          # (installer/after-pack.js) instead of a Developer ID one
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+        run: npx electron-builder ${{ matrix.args }} --publish always

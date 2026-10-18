@@ -25,14 +25,26 @@ function execCmd(file, args) {
 /**
  * Internet Fix (DNS reset, Winsock reset, IP reset)
  */
+// DNS cache flush only: resetting adapters on macOS/Linux needs admin rights,
+// and restarting networking from an app could leave the user offline.
+const POSIX_INTERNET_STEPS = {
+  darwin: [
+    { name: "Clearing old internet data...", cmd: "dscacheutil", args: ["-flushcache"] },
+    { name: "Refreshing name lookups...", cmd: "killall", args: ["-HUP", "mDNSResponder"] },
+  ],
+  linux: [
+    { name: "Clearing old internet data...", cmd: "resolvectl", args: ["flush-caches"] },
+  ],
+};
+
 async function internetFix(onProgress) {
-  const commands = [
+  const commands = process.platform === "win32" ? [
     { name: "Clearing old internet data...", cmd: "ipconfig", args: ["/flushdns"] },
     { name: "Resetting network connection...", cmd: "netsh", args: ["winsock", "reset"] },
     { name: "Fixing IP settings...", cmd: "netsh", args: ["int", "ip", "reset"] },
     { name: "Disconnecting network...", cmd: "ipconfig", args: ["/release"] },
     { name: "Reconnecting to network...", cmd: "ipconfig", args: ["/renew"] }
-  ];
+  ] : (POSIX_INTERNET_STEPS[process.platform] || POSIX_INTERNET_STEPS.linux);
   const results = [];
   for (const step of commands) {
     if (onProgress) onProgress(step.name);
@@ -55,6 +67,7 @@ const os = require("os");
  * RAM Boost (Empty Working Set of all processes)
  */
 async function ramBoost(onProgress) {
+  if (process.platform !== "win32") return { ok: false, freedBytes: 0, error: "Not available on this system." };
   const beforeFree = os.freemem();
   if (onProgress) onProgress("Freeing up unused memory...");
   const script1 = `
@@ -89,6 +102,7 @@ async function ramBoost(onProgress) {
  * Auto Fix Common Issues (Reset Windows Update, Clear Spooler, Reset Caches)
  */
 async function autoFix(onProgress) {
+  if (process.platform !== "win32") return { ok: false, error: "Not available on this system." };
   if (onProgress) onProgress("Pausing background services...");
   await execCmd("powershell.exe", ["-NoProfile", "-Command", "Stop-Service -Name wuauserv, cryptSvc, bits, msiserver, spooler -Force -ErrorAction SilentlyContinue"]);
 

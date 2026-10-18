@@ -8,6 +8,7 @@ const fs   = (() => { try { return require("original-fs"); } catch (_) { return 
 const os   = require("os");
 const path = require("path");
 const { execFile } = require("child_process");
+const { createPlatform } = require(path.join(__dirname, "platform.js"));
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const TEMP_MIN_AGE_DAYS = 7;
@@ -30,11 +31,25 @@ const TARGETS = [
 ];
 
 // ─── command helpers ─────────────────────────────────────────────────────────
+// Apps started from the macOS Finder or a Linux menu get a minimal PATH, so
+// add the usual places where Homebrew, nvm, pipx, cargo etc. put tools.
+function posixPath(env) {
+  const home = env.HOME || os.homedir();
+  const extra = ["/opt/homebrew/bin", "/usr/local/bin", path.join(home, ".local", "bin"),
+    path.join(home, ".cargo", "bin"), path.join(home, "Library", "pnpm"), path.join(home, ".local", "share", "pnpm"),
+    "/usr/bin", "/bin"];
+  return [env.PATH || ""].concat(extra).filter(Boolean).join(":");
+}
+
 function defaultRun(cmdline, timeoutMs) {
   return new Promise((resolve) => {
     try {
-      execFile("cmd.exe", ["/d", "/s", "/c", `"${cmdline}"`], {
-        windowsHide: true, windowsVerbatimArguments: true,
+      const isWin = process.platform === "win32";
+      const [shell, args, extra] = isWin
+        ? ["cmd.exe", ["/d", "/s", "/c", `"${cmdline}"`], { windowsVerbatimArguments: true }]
+        : ["/bin/sh", ["-c", cmdline], { env: { ...process.env, PATH: posixPath(process.env) } }];
+      execFile(shell, args, {
+        windowsHide: true, ...extra,
         timeout: timeoutMs || 15000, maxBuffer: 4 * 1024 * 1024,
       }, (err, stdout, stderr) => resolve({
         ok: !err, stdout: String(stdout || ""), stderr: String(stderr || ""),
@@ -49,7 +64,7 @@ function defaultRun(cmdline, timeoutMs) {
 // Finds a real executable on PATH. App-execution-alias stubs in WindowsApps
 // (e.g. the "python" that opens the Microsoft Store) are ignored.
 async function defaultWhich(tool, run) {
-  const r = await run(`where ${tool}`, 5000);
+  const r = await run(process.platform === "win32" ? `where ${tool}` : `command -v ${tool}`, 5000);
   if (!r.ok) return null;
   const hit = r.stdout.split(/\r?\n/).map((l) => l.trim())
     .find((l) => l && !/\\WindowsApps\\/i.test(l));
@@ -103,10 +118,10 @@ async function removeContents(dir) {
 // Mirrors Playwright's own clean-up: every installed copy of playwright-core
 // leaves a file in <browsers>/.links pointing at itself; a browser folder is
 // still needed if any of those copies lists its revision in browsers.json.
-function playwrightBrowsersPath(env, localAppData) {
+function playwrightBrowsersPath(env, plat) {
   const custom = env.PLAYWRIGHT_BROWSERS_PATH;
   if (custom && custom !== "0") return custom;
-  return path.join(localAppData, "ms-playwright");
+  return plat.dev.playwright;
 }
 
 function stalePlaywrightDirs(browsersPath) {
@@ -134,19 +149,18 @@ function stalePlaywrightDirs(browsersPath) {
 }
 
 // ─── conda ───────────────────────────────────────────────────────────────────
-function condaLocations(env, userProfile, localAppData) {
+function condaLocations(env, plat) {
   const pkgs = [];
   const exes = [];
-  if (env.CONDA_PKGS_DIRS) pkgs.push(...env.CONDA_PKGS_DIRS.split(";").filter(Boolean));
-  for (const base of ["anaconda3", "miniconda3", "miniforge3", "mambaforge"]) {
-    const root = path.join(userProfile, base);
+  if (env.CONDA_PKGS_DIRS) pkgs.push(...env.CONDA_PKGS_DIRS.split(plat.isWin ? ";" : ":").filter(Boolean));
+  for (const root of plat.dev.condaBases) {
     pkgs.push(path.join(root, "pkgs"));
-    exes.push(path.join(root, "Scripts", "conda.exe"), path.join(root, "condabin", "conda.bat"));
+    for (const rel of plat.dev.condaExes) exes.push(path.join(root, ...rel));
   }
-  pkgs.push(path.join(userProfile, ".conda", "pkgs"), path.join(localAppData, "conda", "conda", "pkgs"));
+  pkgs.push(...plat.dev.condaExtraPkgs);
   const seen = new Set();
   return {
-    pkgDirs: pkgs.filter((p) => { const k = p.toLowerCase(); if (seen.has(k) || !isDir(p)) return false; seen.add(k); return true; }),
+    pkgDirs: pkgs.filter((p) => { const k = plat.pathKey(p); if (seen.has(k) || !isDir(p)) return false; seen.add(k); return true; }),
     exes: exes.filter((p) => fs.existsSync(p)),
   };
 }
@@ -154,9 +168,12 @@ function condaLocations(env, userProfile, localAppData) {
 // ─── main API ────────────────────────────────────────────────────────────────
 function createDevCaches(options = {}) {
   const env          = options.env || process.env;
-  const localAppData = options.localAppData || env.LOCALAPPDATA || path.join(os.homedir(), "AppData", "Local");
-  const userProfile  = options.userProfile || env.USERPROFILE || os.homedir();
-  const tempDir      = options.tempDir || env.TEMP || env.TMP || os.tmpdir();
+  // tests pass platform: "win32" | "darwin" | "linux" plus a fake home
+  const plat = createPlatform({
+    platform: options.platform, env, home: options.userProfile,
+    localAppData: options.localAppData, tmp: options.tempDir,
+  });
+  const tempDir      = plat.tempDir;
   const now          = options.now || Date.now;
   const run          = options.run || defaultRun;
   const which        = options.which || ((tool) => defaultWhich(tool, run));
@@ -176,7 +193,7 @@ function createDevCaches(options = {}) {
         const r = await run("npm config get cache", 15000);
         if (r.ok && r.stdout.trim()) cache = r.stdout.trim().split(/\r?\n/).pop().trim();
       }
-      if (!cache) cache = path.join(localAppData, "npm-cache");
+      if (!cache) cache = plat.dev.npmCache;
       const dir = path.join(cache, "_cacache");
       if (!isDir(dir)) return base;
       const s = await dirStats(dir);
@@ -191,7 +208,7 @@ function createDevCaches(options = {}) {
         const r = await run("uv cache dir", 15000);
         if (r.ok && r.stdout.trim()) dir = r.stdout.trim().split(/\r?\n/).pop().trim();
       }
-      if (!dir) dir = path.join(localAppData, "uv", "cache");
+      if (!dir) dir = plat.dev.uvCache;
       if (!isDir(dir)) return base;
       const s = await dirStats(dir);
       return { ...base, path: dir, paths: [dir], items: s.files, bytes: s.bytes, cleanable: s.bytes > 0, tool: uv,
@@ -205,7 +222,7 @@ function createDevCaches(options = {}) {
         const r = await run("pnpm store path", 15000);
         if (r.ok && r.stdout.trim()) dir = r.stdout.trim().split(/\r?\n/).pop().trim();
       }
-      if (!dir) dir = path.join(localAppData, "pnpm", "store");
+      if (!dir) dir = plat.dev.pnpmStore;
       if (!isDir(dir)) return base;
       const s = await dirStats(dir);
       if (!pnpm) {
@@ -217,7 +234,7 @@ function createDevCaches(options = {}) {
     }
 
     if (t.id === "pip") {
-      const dir = env.PIP_CACHE_DIR || path.join(localAppData, "pip", "Cache");
+      const dir = env.PIP_CACHE_DIR || plat.dev.pipCache;
       if (!isDir(dir)) return base;
       const s = await dirStats(dir);
       return { ...base, path: dir, paths: [dir], items: s.files, bytes: s.bytes, cleanable: s.bytes > 0,
@@ -225,7 +242,7 @@ function createDevCaches(options = {}) {
     }
 
     if (t.id === "conda") {
-      const loc = condaLocations(env, userProfile, localAppData);
+      const loc = condaLocations(env, plat);
       if (!loc.pkgDirs.length) return base;
       let files = 0, bytes = 0;
       for (const d of loc.pkgDirs) { const s = await dirStats(d); files += s.files; bytes += s.bytes; }
@@ -247,7 +264,7 @@ function createDevCaches(options = {}) {
     }
 
     if (t.id === "playwright") {
-      const dir = playwrightBrowsersPath(env, localAppData);
+      const dir = playwrightBrowsersPath(env, plat);
       if (!isDir(dir)) return base;
       const stale = stalePlaywrightDirs(dir);
       if (!stale) return { ...base, path: dir, note: "Couldn't tell which browsers are in use." };

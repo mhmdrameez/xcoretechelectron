@@ -120,9 +120,11 @@ test.describe('Large file finder (app)', () => {
   });
 
   test('refuses to delete files that were not in the scan results', async () => {
-    const r = await window.evaluate(() => window.api.largeDelete(['C:\\Windows\\win.ini'], true));
+    // any existing file that the scan didn't return — here, the test runner itself
+    const outside = process.execPath;
+    const r = await window.evaluate((p) => window.api.largeDelete([p], true), outside);
     expect(r.ok).toBe(false);
-    expect(fs.existsSync('C:\\Windows\\win.ini')).toBe(true);
+    expect(fs.existsSync(outside)).toBe(true);
   });
 
   test('deletes the selected file and removes it from the list', async () => {

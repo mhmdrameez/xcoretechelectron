@@ -154,7 +154,7 @@
   function updateSystemDashboard(s) {
     if (!s) return;
     if (sysDeviceEl) sysDeviceEl.textContent = s.device || "-";
-    if (sysOsEl) sysOsEl.textContent = friendlyOs(s.os);
+    if (sysOsEl) sysOsEl.textContent = s.osPretty || friendlyOs(s.os);
     if (sysCpuEl) sysCpuEl.textContent = s.cpu || "-";
     if (sysRamEl) sysRamEl.textContent = s.ram ? `${s.ram} GB` : "-";
     if (sysFreeEl) sysFreeEl.textContent = s.free ? `${s.free} GB` : "-";
@@ -598,7 +598,7 @@
         chk.disabled = true;
         setStartupStatus(wantEnable ? `Enabling "${item.name}"…` : `Disabling "${item.name}"…`);
         try {
-          const r = await window.api.setStartupEnabled(item.name, item.approvedKey, item.regFlag, wantEnable);
+          const r = await window.api.setStartupEnabled(item.id, wantEnable);
           if (r && r.ok) {
             item.enabled = wantEnable;
             chk.title = wantEnable ? "Click to disable" : "Click to enable";
@@ -1036,8 +1036,56 @@
     });
   }
 
+  // ── Wording and tools per operating system ─────────────────────────────────
+  // index.html carries the Windows wording; other systems swap it here.
+  const OS_TEXT = {
+    darwin: {
+      cleanupDesc: "Browser caches, crash reports and leftovers macOS doesn't need.",
+      autostart: "Clean up automatically when you log in",
+      largeNote: "Find the biggest files taking up space. System and app folders are left out.",
+      techNote: "Only the fixes that work on macOS are shown.",
+      internetDesc: "Clears the DNS cache so websites are looked up again. Your connection stays on.",
+      startupTitle: "Apps that start when you log in",
+      osLabel: "System",
+    },
+    linux: {
+      cleanupDesc: "Thumbnails, browser caches and leftovers Linux doesn't need.",
+      autostart: "Clean up automatically when you log in",
+      largeNote: "Find the biggest files taking up space. System and app folders are left out.",
+      techNote: "Only the fixes that work on Linux are shown.",
+      internetDesc: "Clears the DNS cache so websites are looked up again. Your connection stays on.",
+      startupTitle: "Apps that start when you log in",
+      osLabel: "System",
+    },
+  };
+
+  async function applyPlatform() {
+    if (!window.api.getPlatform) return;
+    let info = null;
+    try { info = await window.api.getPlatform(); } catch (_) { return; }
+    if (!info || !info.ok) return;
+    document.body.dataset.os = info.id;
+    const texts = OS_TEXT[info.id];
+    if (texts) {
+      for (const node of document.querySelectorAll("[data-txt]")) {
+        const t = texts[node.dataset.txt];
+        if (t) node.textContent = t;
+      }
+    }
+    const tools = Array.isArray(info.techTools) ? info.techTools : [];
+    for (const row of document.querySelectorAll("[data-tool]")) {
+      const id = row.dataset.tool;
+      // "run all" only makes sense when there is more than one fix
+      const show = id === "full" ? tools.length > 1 : tools.includes(id);
+      row.hidden = !show;
+    }
+  }
+
   // ── init ───────────────────────────────────────────────────────────────────
   function init() {
+    applyPlatform();
+    const yearEl = el("copyrightYear");
+    if (yearEl) yearEl.textContent = String(new Date().getFullYear());
     setButtons();
     setBusy(false);
     bootstrap();

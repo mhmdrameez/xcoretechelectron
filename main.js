@@ -44,6 +44,9 @@ const path = require("path");
 // Lazy-load heavy modules — not needed until the user clicks something.
 let _scanner  = null; const scanner  = () => (_scanner  ||= require(path.join(__dirname, "scanner.js")));
 let _cleaner  = null; const cleaner  = () => (_cleaner  ||= require(path.join(__dirname, "cleaner.js")));
+const { getPlatform } = require(path.join(__dirname, "platform.js"));
+const startupItems = require(path.join(__dirname, "startupItems.js"));
+let lastStartupItems = new Map(); // id -> item from the last list, so toggles can't be forged
 let _largeFiles = null; const largeFiles = () => (_largeFiles ||= require(path.join(__dirname, "largeFiles.js")));
 // one instance so clean() only touches what detect() found; test runs use a fixture
 let _devCaches = null;
@@ -147,7 +150,8 @@ function resolveIconPath() {
   if (_iconPath !== null) return _iconPath;
   const ico = path.join(__dirname, "assets", "app-icon.ico");
   const png = path.join(__dirname, "assets", "app-icon.png");
-  _iconPath = fs.existsSync(ico) ? ico : fs.existsSync(png) ? png : "";
+  const order = process.platform === "win32" ? [ico, png] : [png];
+  _iconPath = order.find((p) => fs.existsSync(p)) || "";
   return _iconPath || undefined;
 }
 
@@ -175,7 +179,11 @@ function createTray() {
   const iconPath = resolveIconPath();
   if (!iconPath) return;
   try {
-    tray = new Tray(nativeImage.createFromPath(iconPath));
+    let img = nativeImage.createFromPath(iconPath);
+    // menu-bar / panel icons are small; a 256px image would be shown huge or blurry
+    if (process.platform === "darwin") img = img.resize({ width: 18, height: 18 });
+    else if (process.platform !== "win32") img = img.resize({ width: 22, height: 22 });
+    tray = new Tray(img);
     tray.setToolTip("XCoreTech PC Optimizer");
     tray.setContextMenu(Menu.buildFromTemplate([
       { label: "Open Optimizer", click: showMainWindow },
@@ -250,7 +258,7 @@ function toUniquePathList(input) {
   for (let i = 0; i < input.length; i++) {
     const p = String(input[i] || "").trim();
     if (!p) continue;
-    const k = p.toLowerCase();
+    const k = getPlatform().pathKey(p);
     if (!seen.has(k)) { seen.add(k); out.push(p); }
   }
   return out;
@@ -295,145 +303,6 @@ async function recalculate(files, directories) {
   return { files: remainingFiles, directories: remainingDirectories, totalBytes: remainingBytes };
 }
 
-// ── Startup programs — registry + shell folders ───────────────────────────────
-const STARTUP_REG_SOURCES = [
-  { label: "HKCU Run",     hive: "HKCU",   regFlag: "/reg:64",
-    key: "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run",
-    approvedKey: "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\StartupApproved\\Run" },
-  { label: "HKCU RunOnce",hive: "HKCU",   regFlag: "/reg:64",
-    key: "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnce",
-    approvedKey: null },
-  { label: "HKLM Run",     hive: "HKLM",   regFlag: "/reg:64",
-    key: "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run",
-    approvedKey: "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\StartupApproved\\Run" },
-  { label: "HKLM RunOnce",hive: "HKLM",   regFlag: "/reg:64",
-    key: "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnce",
-    approvedKey: null },
-  { label: "HKLM32 Run",  hive: "HKLM32", regFlag: "/reg:32",
-    key: "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run",
-    approvedKey: "HKLM\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Explorer\\StartupApproved\\Run32" },
-  { label: "HKCU Policies",hive: "HKCU",  regFlag: "/reg:64",
-    key: "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run",
-    approvedKey: null },
-  { label: "HKLM Policies",hive: "HKLM",  regFlag: "/reg:64",
-    key: "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run",
-    approvedKey: null },
-];
-
-function parseRegEntries(stdout) {
-  const entries = [];
-  for (const line of stdout.split(/\r?\n/)) {
-    const t = line.trimStart();
-    if (!t || t.startsWith("HKEY_") || t.startsWith("!")) continue;
-    const m = t.match(/^(.+?)\s{2,}(REG_SZ|REG_EXPAND_SZ)\s{2,}(.+)$/);
-    if (m) { entries.push({ name: m[1].trim(), value: m[3].trim() }); continue; }
-    const parts = t.split(/\t/);
-    if (parts.length >= 3 &&
-        (parts[1].trim() === "REG_SZ" || parts[1].trim() === "REG_EXPAND_SZ")) {
-      entries.push({ name: parts[0].trim(), value: parts.slice(2).join("\t").trim() });
-    }
-  }
-  return entries;
-}
-
-function parseRegDisabled(stdout) {
-  const map = {};
-  for (const line of stdout.split(/\r?\n/)) {
-    const t = line.trimStart();
-    if (!t || t.startsWith("HKEY_")) continue;
-    const m = t.match(/^(.+?)\s{2,}REG_BINARY\s{2,}([0-9A-Fa-f]+)/);
-    if (m) { map[m[1].trim()] = parseInt(m[2].slice(0, 2), 16) === 3; continue; }
-    const parts = t.split(/\t/);
-    if (parts.length >= 3 && parts[1].trim() === "REG_BINARY")
-      map[parts[0].trim()] = parseInt((parts[2] || "").slice(0, 2), 16) === 3;
-  }
-  return map;
-}
-
-function regQuery(key, flag) {
-  return new Promise((resolve) => {
-    exec(`reg query "${key}" ${flag || ""}`, { windowsHide: true }, (err, out) =>
-      resolve(err ? [] : parseRegEntries(out || "")));
-  });
-}
-function regQueryDisabled(key, flag) {
-  return new Promise((resolve) => {
-    exec(`reg query "${key}" ${flag || ""}`, { windowsHide: true }, (err, out) =>
-      resolve(err ? {} : parseRegDisabled(out || "")));
-  });
-}
-
-function scanStartupFolder(folderPath, label) {
-  try {
-    if (!fs.existsSync(folderPath)) return [];
-    return fs.readdirSync(folderPath).filter(f => !f.startsWith(".")).map(f => ({
-      id: `${label}|${f}`, name: f.replace(/\.[^.]+$/, ""),
-      command: path.join(folderPath, f),
-      hive: label, approvedKey: null, registryKey: null, regFlag: null,
-      source: label, enabled: true, canToggle: false,
-    }));
-  } catch (_) { return []; }
-}
-
-async function listStartupPrograms() {
-  const seen = new Set();
-  const results = [];
-
-  // Query ALL hive sources in PARALLEL — not one-by-one
-  const tasks = STARTUP_REG_SOURCES.map(async (src) => {
-    const [entries, disabled] = await Promise.all([
-      regQuery(src.key, src.regFlag),
-      src.approvedKey ? regQueryDisabled(src.approvedKey, src.regFlag).catch(() => ({})) : Promise.resolve({}),
-    ]);
-    return { src, entries, disabled };
-  });
-  const all = await Promise.all(tasks);
-
-  for (const { src, entries, disabled } of all) {
-    for (const e of entries) {
-      // Skip our own auto-clean startup entry — it's managed by the checkbox above
-      const cmdLower = String(e.value || "").toLowerCase();
-      if (cmdLower.includes("--autoclean")) continue;
-
-      const uid = `${src.label}|${e.name.toLowerCase()}`;
-      if (seen.has(uid)) continue;
-      seen.add(uid);
-      results.push({
-        id: uid, name: e.name, command: e.value,
-        hive: src.hive, approvedKey: src.approvedKey,
-        registryKey: src.key, regFlag: src.regFlag,
-        source: src.label,
-        enabled: !(disabled[e.name] === true),
-        canToggle: !!src.approvedKey,
-      });
-    }
-  }
-
-  // Shell startup folders
-  try {
-    const userStartup   = path.join(app.getPath("appData"), "Microsoft\\Windows\\Start Menu\\Programs\\Startup");
-    const commonStartup = "C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Startup";
-    for (const item of [
-      ...scanStartupFolder(userStartup,   "Startup Folder"),
-      ...scanStartupFolder(commonStartup, "Common Startup"),
-    ]) {
-      if (!seen.has(item.id)) { seen.add(item.id); results.push(item); }
-    }
-  } catch (_) {}
-
-  return results;
-}
-
-function setStartupItemEnabled(name, approvedKey, regFlag, enable) {
-  return new Promise((resolve) => {
-    if (!approvedKey) return resolve({ ok: false, error: "Cannot toggle this entry." });
-    const hex = enable ? "0200000000000000000000" : "0300000000000000000000";
-    exec(`reg add "${approvedKey}" /v "${name}" /t REG_BINARY /d ${hex} /f ${regFlag || ""}`,
-      { windowsHide: true }, (err) =>
-        resolve(err ? { ok: false, error: err.message } : { ok: true }));
-  });
-}
-
 // ── IPC setup ─────────────────────────────────────────────────────────────────
 function setupIpc() {
 
@@ -449,17 +318,32 @@ function setupIpc() {
 
   // startup manager
   ipcMain.handle("startup:list", async () => {
-    try { return { ok: true, items: await listStartupPrograms() }; }
+    try {
+      const items = await startupItems.listStartupItems();
+      lastStartupItems = new Map(items.map((i) => [i.id, i]));
+      return { ok: true, items };
+    }
     catch (e) { return { ok: false, error: String(e.message || e), items: [] }; }
   });
-  ipcMain.handle("startup:setEnabled", async (_e, { name, approvedKey, regFlag, enable }) => {
-    try { return await setStartupItemEnabled(name, approvedKey, regFlag, !!enable); }
+  ipcMain.handle("startup:setEnabled", async (_e, req) => {
+    const r = (req && typeof req === "object") ? req : {};
+    const item = lastStartupItems.get(String(r.id || ""));
+    if (!item) return { ok: false, error: "Unknown startup entry. Refresh the list." };
+    try {
+      const res = await startupItems.setStartupEnabled(item, !!r.enable);
+      if (res && res.ok) item.enabled = !!r.enable;
+      return res;
+    }
     catch (e) { return { ok: false, error: String(e.message || e) }; }
   });
 
   // stats / system
   ipcMain.handle("stats:get",   async () => ({ ok: true, stats: getStatsSnapshot() }));
   ipcMain.handle("system:get",  async () => ({ ok: true, system: getSystemInfo() }));
+  ipcMain.handle("platform:get", async () => {
+    const p = getPlatform();
+    return { ok: true, id: p.id, name: p.name, techTools: p.techTools };
+  });
 
   // analytics
   ipcMain.handle("analytics:track", async (_e, payload) => {
@@ -559,7 +443,7 @@ function setupIpc() {
     try {
       const progressSend = debounceMs((p) => send("large:progress", p), 200);
       const result = await largeFiles().findLargeFiles(root.path, { minBytes, cancel, onProgress: progressSend });
-      lastLargeFiles = new Map(result.items.map((i) => [i.path.toLowerCase(), i]));
+      lastLargeFiles = new Map(result.items.map((i) => [getPlatform().pathKey(i.path), i]));
       sendStatus(result.cancelled
         ? "Large file search stopped."
         : `Found ${result.found} file(s) of ${formatBytes(minBytes)} or more.`);
@@ -577,7 +461,7 @@ function setupIpc() {
   });
 
   ipcMain.handle("large:reveal", (_e, filePath) => {
-    const item = lastLargeFiles.get(String(filePath || "").toLowerCase());
+    const item = lastLargeFiles.get(getPlatform().pathKey(filePath));
     if (!item) return { ok: false, error: "Unknown file." };
     try { shell.showItemInFolder(item.path); return { ok: true }; }
     catch (e) { return { ok: false, error: String(e.message || e) }; }
@@ -588,7 +472,7 @@ function setupIpc() {
     const permanent = !!r.permanent;
     // only files that came from our own last scan, and never system locations
     const items = toUniquePathList(Array.isArray(r.paths) ? r.paths : [])
-      .map((p) => lastLargeFiles.get(p.toLowerCase()))
+      .map((p) => lastLargeFiles.get(getPlatform().pathKey(p)))
       .filter((i) => i && !isProbablyUnsafeSystemPath(i.path));
     if (!items.length) return { ok: false, error: "No files selected." };
 
@@ -624,7 +508,7 @@ function setupIpc() {
           await shell.trashItem(item.path);
         }
         removed.push(item.path);
-        lastLargeFiles.delete(item.path.toLowerCase());
+        lastLargeFiles.delete(getPlatform().pathKey(item.path));
       } catch (e) {
         failed.push({ path: item.path, error: e && e.code === "EBUSY" ? "File is in use." : String(e.message || e) });
       }
