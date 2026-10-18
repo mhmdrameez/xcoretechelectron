@@ -61,8 +61,12 @@ VERSION="$(printf '%s' "$RELEASE_JSON" | grep -m1 '"tag_name"' | sed -E 's/.*"ta
 URLS="$(printf '%s' "$RELEASE_JSON" | grep '"browser_download_url"' | sed -E 's/.*"browser_download_url": *"([^"]+)".*/\1/')"
 [ -n "$VERSION" ] || die "Couldn't read the release version."
 
-asset_url() {  # $1 = file name ending, e.g. "-linux-x64.deb"
-  printf '%s\n' "$URLS" | grep -F -- "$1" | grep -v '\.blockmap$' | head -n1 || true
+asset_url() {  # one or more file name endings, e.g. "-linux-amd64.deb" "-linux-x64.deb"; first match wins
+  local ending url
+  for ending in "$@"; do
+    url="$(printf '%s\n' "$URLS" | grep -F -- "$ending" | grep -v '\.blockmap$' | head -n1 || true)"
+    if [ -n "$url" ]; then printf '%s\n' "$url"; return; fi
+  done
 }
 
 TMP="$(mktemp -d)"
@@ -116,7 +120,8 @@ linux_format() {
 
 install_deb() {
   local url file
-  url="$(asset_url "-linux-$ARCH.deb")"
+  # electron-builder names Linux files after each format's own arch name
+  url="$(asset_url "-linux-amd64.deb" "-linux-x64.deb")"
   [ -n "$url" ] || no_build "Linux .deb ($ARCH)"
   file="$TMP/xcoretech.deb"
   download "$url" "$file"
@@ -130,7 +135,7 @@ install_deb() {
 
 install_rpm() {
   local url file
-  url="$(asset_url "-linux-$ARCH.rpm")"
+  url="$(asset_url "-linux-x86_64.rpm" "-linux-x64.rpm")"
   [ -n "$url" ] || no_build "Linux .rpm ($ARCH)"
   file="$TMP/xcoretech.rpm"
   download "$url" "$file"
@@ -154,7 +159,7 @@ install_rpm() {
 
 install_appimage() {
   local url bin_dir target apps_dir icon_dir
-  url="$(asset_url "-linux-$ARCH.AppImage")"
+  url="$(asset_url "-linux-x86_64.AppImage" "-linux-x64.AppImage")"
   [ -n "$url" ] || no_build "Linux AppImage ($ARCH)"
   bin_dir="$HOME/.local/bin"
   apps_dir="$HOME/.local/share/applications"
