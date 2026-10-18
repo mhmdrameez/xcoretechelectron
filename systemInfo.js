@@ -22,7 +22,7 @@ function getSystemInfo() {
   return {
     device: clampText(os.hostname(), 32).toUpperCase(),
     os: clampText(`${os.platform()} ${os.release()}`, 26),
-    cpu: clampText(cpuModel, 38),
+    cpu: clampText(cpuModel, 64),
     ram: toGb(os.totalmem()),
     free: toGb(os.freemem()),
   };

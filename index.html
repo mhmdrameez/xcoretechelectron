@@ -3,216 +3,174 @@
 
 <head>
   <meta charset="UTF-8" />
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>XCoreTech PC Optimizer</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
-  <!-- ── Global Notifications ── -->
-  <div id="updateBanner">
-    <span class="uMsg" id="updateMsg">🔄 Checking for updates…</span>
+  <div id="updateBanner" role="status">
+    <span class="uMsg" id="updateMsg">Checking for updates…</span>
     <span class="uPct" id="updatePct"></span>
     <button class="uBtn" id="updateBtn" style="display:none">Restart &amp; Update</button>
   </div>
 
   <div id="app">
-    <!-- ── Professional Header ── -->
     <header class="header">
-      <div class="header-left">
-        <div class="brand">
-          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 4px;">
-            <div class="appname">XCoreTech PC Optimizer</div>
-            <div id="proBadge" class="proBadge pro">PRO</div>
-            <div id="trustedBadge" class="trustedBadge" title="Verified users who trust XCoreTech PC Optimizer"
-              style="display:none; align-items: center; gap: 6px; padding: 4px 10px; background: var(--bg-panel-alt); border-radius: 20px; border: 1px solid var(--border-main);">
-              <span class="tIcon" style="font-size: 13px;">🛡️</span>
-              <span class="tCount" id="trustedCount"
-                style="font-size: 11px; font-weight: 700; color: var(--text-main); letter-spacing: 0.05em;">0+
-                Users</span>
-            </div>
-          </div>
-          <div class="subtitle">System Analytics & Advanced Performance Tuning</div>
-        </div>
-      </div>
-
-      <div class="header-right" style="display: flex; gap: 12px; align-items: center;">
-        <button id="scanBtn" class="btn primary">
-          <span>🔍</span> Scan System
-        </button>
-        <button id="cleanBtn" class="btn danger" disabled>
-          <span>✨</span> Optimize Now
-        </button>
+      <img class="logo" src="assets/app-icon.png" alt="" width="28" height="28">
+      <div class="appname">XCoreTech PC Optimizer</div>
+      <div id="proBadge" class="proBadge pro">PRO</div>
+      <div id="trustedBadge" class="trustedBadge" title="People using XCoreTech PC Optimizer">
+        <span class="tCount" id="trustedCount">0+ Users</span>
       </div>
     </header>
 
-    <!-- ── System Health Section ── -->
-    <section class="controls card">
-      <div style="display:flex; justify-content: space-between; align-items: center; width: 100%;">
-        <label class="checkbox" id="autoStartContainer">
-          <input id="autoStartChk" type="checkbox" />
-          <span>Launch at Windows Startup (Auto-Clean)</span>
-        </label>
-        <div class="status" style="margin: 0;">System Status: <span id="statusText"
-            style="color: var(--text-main); font-weight: 600;">Idle</span></div>
+    <!-- Clean up -->
+    <section class="card cleanup">
+      <div class="cleanupTop">
+        <div>
+          <h1>Clean up junk files</h1>
+          <p class="muted">Temporary files, browser caches and leftovers Windows doesn't need.</p>
+        </div>
+        <div class="actions">
+          <button id="scanBtn" class="btn">Scan</button>
+          <button id="cleanBtn" class="btn primary" disabled>Clean up</button>
+        </div>
       </div>
 
-      <div class="progress" style="margin-top: 20px; width: 100%;">
+      <div class="bar" aria-hidden="true"><div class="barFill" id="progressBar"></div></div>
+
+      <dl class="numbers">
         <div class="metric">
-          <div class="label">Total Objects</div>
-          <div id="totalFiles" class="value">0</div>
+          <dt class="label">Files found</dt>
+          <dd id="totalFiles" class="value">0</dd>
         </div>
         <div class="metric">
-          <div class="label">Accumulated Junk</div>
-          <div id="totalSize" class="value">0 B</div>
+          <dt class="label">Space you can free</dt>
+          <dd id="totalSize" class="value">0 B</dd>
         </div>
         <div class="metric">
-          <div class="label">Analysis Progress</div>
-          <div id="progressPct" class="value">0%</div>
+          <dt class="label">Scan progress</dt>
+          <dd id="progressPct" class="value">0%</dd>
         </div>
-      </div>
+      </dl>
+
+      <p class="status">Status: <span id="statusText">Idle</span></p>
+
+      <details class="files" id="filesDetails">
+        <summary>See which files will be removed</summary>
+        <div id="fileList" class="fileList"></div>
+        <div class="filesFoot">
+          <span id="listNote" class="muted"></span>
+          <button id="toggleFilesBtn" class="link" style="display:none">Show All</button>
+        </div>
+      </details>
+
+      <label class="checkbox" id="autoStartContainer">
+        <input id="autoStartChk" type="checkbox" />
+        <span>Clean up automatically when Windows starts</span>
+      </label>
     </section>
 
-    <!-- ── Performance Analytics ── -->
+    <!-- History -->
     <section class="card">
-      <div class="cardTitle">Performance Impact Analytics</div>
-      <div class="impactGrid">
-        <div class="impactCard">
-          <div class="impactLabel">Total Data Purged</div>
-          <div id="impactTotalCleaned" class="impactValue">0 B</div>
+      <h2>So far</h2>
+      <dl class="history">
+        <div>
+          <dt>Space freed</dt>
+          <dd id="impactTotalCleaned">0 B</dd>
         </div>
-        <div class="impactCard">
-          <div class="impactLabel">Optimization Cycles</div>
-          <div id="impactRuns" class="impactValue">0</div>
+        <div>
+          <dt>Clean-ups</dt>
+          <dd id="impactRuns">0</dd>
         </div>
-        <div class="impactCard">
-          <div class="impactLabel">Avg Latency Reduction</div>
-          <div id="impactAvgTime" class="impactValue">0s</div>
+        <div>
+          <dt>Average time</dt>
+          <dd id="impactAvgTime">0s</dd>
         </div>
-        <div class="impactCard">
-          <div class="impactLabel">Performance Gain</div>
-          <div id="impactSpeedGain" class="impactValue">0%</div>
+        <div>
+          <dt>Estimated speed-up</dt>
+          <dd id="impactSpeedGain">0%</dd>
         </div>
-      </div>
+      </dl>
     </section>
 
-    <!-- ── Conditional Panels ── -->
-
-    <section id="dashboardCard" class="card hidden">
-      <div class="cardTitle">Optimization Summary</div>
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-        <div class="impactCard">
-          <div class="impactLabel">Resources Freed</div>
-          <div id="optJunkRemoved" class="impactValue">0 B</div>
-        </div>
-        <div class="impactCard">
-          <div class="impactLabel">Optimization Status</div>
-          <div id="optStatus" class="impactValue" style="color: var(--accent-secondary);">Idle</div>
-        </div>
-      </div>
-    </section>
-    <!-- ── Technician Mode (Advanced Pro Tools) ── -->
+    <!-- Quick fixes -->
     <section class="card" id="technicianSection">
-      <div class="cardTitle"
-        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <span>🛠️</span> Technician Mode
-        </div>
-      </div>
+      <h2>Quick fixes</h2>
+      <p class="muted sectionNote">Some fixes need the app to be run as administrator to work fully.</p>
 
-      <div class="techGrid">
-        <div class="techTool">
-          <div class="techToolIcon">🌐</div>
-          <div class="techToolInfo">
-            <div class="techToolName">Internet Fix</div>
-            <div class="techToolDesc">Flush DNS, reset Winsock & IP stack.</div>
-            <div class="techToolProgress" id="techInternetProg"
-              style="font-size:10px; color:var(--accent-secondary); margin-top:4px; height:12px;"></div>
+      <ul class="toolList">
+        <li class="tool">
+          <div class="toolText">
+            <div class="toolName">Internet fix</div>
+            <div class="toolDesc">Clears the DNS cache and resets Winsock and the IP settings. Your connection drops for a few seconds.</div>
+            <div class="toolProg" id="techInternetProg"></div>
           </div>
-          <button id="techInternetBtn" class="btn ghostBtn techBtn">Run Fix</button>
-        </div>
-
-        <div class="techTool">
-          <div class="techToolIcon">🚀</div>
-          <div class="techToolInfo">
-            <div class="techToolName">RAM Boost</div>
-            <div class="techToolDesc">Optimizes memory usage for all apps.</div>
-            <div class="techToolProgress" id="techRamProg"
-              style="font-size:10px; color:var(--accent-secondary); margin-top:4px; height:12px;"></div>
+          <button id="techInternetBtn" class="btn">Run Fix</button>
+        </li>
+        <li class="tool">
+          <div class="toolText">
+            <div class="toolName">Free up memory</div>
+            <div class="toolDesc">Asks running apps to give back memory they aren't using.</div>
+            <div class="toolProg" id="techRamProg"></div>
           </div>
-          <button id="techRamBtn" class="btn ghostBtn techBtn">Optimize</button>
-        </div>
-
-        <div class="techTool">
-          <div class="techToolIcon">⚙️</div>
-          <div class="techToolInfo">
-            <div class="techToolName">Auto Fix</div>
-            <div class="techToolDesc">Fix common Windows Update & Spooler issues.</div>
-            <div class="techToolProgress" id="techAutoProg"
-              style="font-size:10px; color:var(--accent-secondary); margin-top:4px; height:12px;"></div>
+          <button id="techRamBtn" class="btn">Optimize</button>
+        </li>
+        <li class="tool">
+          <div class="toolText">
+            <div class="toolName">Windows Update &amp; printer fix</div>
+            <div class="toolDesc">Restarts update and print services, clears stuck downloads and print jobs, rebuilds the icon cache.</div>
+            <div class="toolProg" id="techAutoProg"></div>
           </div>
-          <button id="techAutoBtn" class="btn ghostBtn techBtn">Repair</button>
-        </div>
-
-        <div class="techTool fullService">
-          <div class="techToolIcon">⚡</div>
-          <div class="techToolInfo">
-            <div class="techToolName">FULL SERVICE</div>
-            <div class="techToolDesc">Execute all fixes in a single sequence.</div>
-            <div class="techToolProgress" id="techFullProg"
-              style="font-size:10px; color:var(--accent-secondary); margin-top:4px; height:12px;"></div>
+          <button id="techAutoBtn" class="btn">Repair</button>
+        </li>
+        <li class="tool">
+          <div class="toolText">
+            <div class="toolName">Run all three</div>
+            <div class="toolDesc">Runs the fixes above one after another.</div>
+            <div class="toolProg" id="techFullProg"></div>
           </div>
-          <button id="techFullBtn" class="btn primary techBtn">One-Click Fix</button>
-        </div>
-      </div>
+          <button id="techFullBtn" class="btn primary">One-Click Fix</button>
+        </li>
+      </ul>
     </section>
 
-    <!-- ── Startup Control Center (Always Visible) ── -->
+    <!-- Startup apps -->
     <section class="card" id="startupSection">
-      <div class="cardTitle"
-        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <span>⚡</span> Windows Startup Manifest
-        </div>
-        <div style="display: flex; gap: 10px; align-items: center;">
-          <button class="btn ghostBtn" id="startupRefreshBtn" style="padding: 6px 14px; font-size: 11px;">
-            🔄 Refresh Manifest
-          </button>
-        </div>
+      <div class="sectionHead">
+        <h2>Apps that start with Windows</h2>
+        <button class="btn small" id="startupRefreshBtn">Refresh</button>
       </div>
+      <p class="muted sectionNote">Turning an app off here only stops it from opening at sign-in. Nothing is uninstalled.</p>
 
-      <div id="startupBody">
-        <div id="startupList"
-          style="max-height: 320px; overflow-y: auto; border: 1px solid var(--border-main); border-radius: var(--radius-md); background: var(--bg-panel-alt); position: relative;">
-          <div style="padding: 30px; text-align: center; color: var(--text-dim); font-size: 13px;">
-            Analyzing system boot manifest...
-          </div>
-        </div>
-        <div id="startupStatusEl"
-          style="margin-top: 12px; font-size: 11px; color: var(--accent-secondary); font-style: italic; min-height: 1.2em;">
-        </div>
+      <div id="startupList" class="startupList">
+        <div class="startupEmpty">Loading…</div>
       </div>
+      <div id="startupStatusEl" class="muted small"></div>
     </section>
 
-    <!-- ── Professional Footer ── -->
+    <!-- This PC -->
+    <section class="card">
+      <h2>This PC</h2>
+      <dl class="pcInfo">
+        <div><dt>Name</dt><dd id="sysDevice">-</dd></div>
+        <div><dt>Windows</dt><dd id="sysOs">-</dd></div>
+        <div><dt>Processor</dt><dd id="sysCpu">-</dd></div>
+        <div><dt>Memory</dt><dd><span id="sysFree">-</span> free of <span id="sysRam">-</span></dd></div>
+      </dl>
+    </section>
+
     <footer class="footer">
-      <div
-        style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--text-dim);">
-        <div>© 2024 XCoreTech Team. All Rights Reserved.</div>
-        <div style="display: flex; gap: 16px;">
-          <span>Version 1.3.29</span>
-          <span>Commercial License</span>
-        </div>
-      </div>
+      <span>© 2024 XCoreTech Team</span>
+      <span>Version 1.3.29</span>
     </footer>
   </div>
 
-  <!-- ── Interactive Overlays ── -->
   <div id="busyOverlay" class="busyOverlay">
-    <div class="busyCard">
+    <div class="busyCard" role="alertdialog" aria-live="polite">
       <div class="spinner"></div>
-      <div id="busyMessage" style="font-weight: 600; letter-spacing: 0.05em;">EXPLAINING SYSTEM STATE...</div>
+      <div id="busyMessage">Working…</div>
     </div>
   </div>
 

@@ -36,7 +36,7 @@ try {
   _a.commandLine.appendSwitch("v", "0");
 } catch (_) {}
 
-const { app, BrowserWindow, ipcMain, dialog, Tray, Menu, nativeImage } = require("electron");
+const { app, BrowserWindow, ipcMain, dialog, Tray, Menu, nativeImage, nativeTheme } = require("electron");
 const fs   = require("fs");
 const { exec }  = require("child_process");
 const path = require("path");
@@ -167,7 +167,7 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 820, height: 620, minWidth: 760, minHeight: 520,
     show: false,
-    backgroundColor: "#0b0f14",
+    backgroundColor: nativeTheme.shouldUseDarkColors ? "#202020" : "#f3f3f3",
     icon: resolveIconPath(),
     webPreferences: {
       contextIsolation:  true,

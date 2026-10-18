@@ -34,6 +34,7 @@
   const trustedBadgeEl = el("trustedBadge");
   const proBadge = el("proBadge");
   const autoStartContainer = el("autoStartContainer");
+  const progressBarEl = el("progressBar");
 
   const techInternetBtn = el("techInternetBtn");
   const techRamBtn = el("techRamBtn");
@@ -122,10 +123,12 @@
     if (totalSizeEl) { totalSizeEl.textContent = formatBytes(b); pingMetric(totalSizeEl); }
   }
   function setProgress(pct) {
+    const clamped = Math.max(0, Math.min(100, pct | 0));
     if (progressPctEl) {
-      progressPctEl.textContent = `${Math.max(0, Math.min(100, pct | 0))}%`;
+      progressPctEl.textContent = `${clamped}%`;
       if (pct % 10 === 0) pingMetric(progressPctEl); // Ping every 10% to avoid too much flickering
     }
+    if (progressBarEl) progressBarEl.style.width = `${clamped}%`;
   }
   function setButtons() {
     const noFiles = (totalFilesEl ? Number(totalFilesEl.textContent) : 0) <= 0;
@@ -140,10 +143,18 @@
   function showFirstRun(show) {
     if (dashboardCardEl) dashboardCardEl.classList.toggle("hidden", false);
   }
+  // "win32 10.0.22631" -> "Windows 11 (build 22631)"
+  function friendlyOs(os) {
+    const m = /^win32 10\.0\.(\d+)/i.exec(String(os || ""));
+    if (!m) return os || "-";
+    const build = Number(m[1]);
+    return `Windows ${build >= 22000 ? 11 : 10} (build ${build})`;
+  }
+
   function updateSystemDashboard(s) {
     if (!s) return;
     if (sysDeviceEl) sysDeviceEl.textContent = s.device || "-";
-    if (sysOsEl) sysOsEl.textContent = s.os || "-";
+    if (sysOsEl) sysOsEl.textContent = friendlyOs(s.os);
     if (sysCpuEl) sysCpuEl.textContent = s.cpu || "-";
     if (sysRamEl) sysRamEl.textContent = s.ram ? `${s.ram} GB` : "-";
     if (sysFreeEl) sysFreeEl.textContent = s.free ? `${s.free} GB` : "-";
@@ -446,20 +457,20 @@
 
   if (window.api.onUpdateAvailable) {
     window.api.onUpdateAvailable((info) => {
-      showBanner(`🔄 Update v${info.version} found — downloading…`, null, false);
+      showBanner(`Update v${info.version} found. Downloading…`, null, false);
     });
   }
 
   if (window.api.onUpdateProgress) {
     window.api.onUpdateProgress((p) => {
-      showBanner(`⬇️ Downloading update…`, p.percent, false);
+      showBanner(`Downloading update…`, p.percent, false);
     });
   }
 
   if (window.api.onUpdateDownloaded) {
     window.api.onUpdateDownloaded((info) => {
       // Show "Restarting…" — the app will auto-quit in 3 seconds (handled by updater.js)
-      showBanner(`✅ v${info.version} downloaded — restarting automatically…`, null, false);
+      showBanner(`Update v${info.version} downloaded, restarting automatically…`, null, false);
     });
   }
 
@@ -467,7 +478,7 @@
     window.api.onUpdateStatus((s) => {
       if (s.phase === "error") {
         // Show error briefly, then hide after 10 seconds
-        showBanner(`⚠️ Update failed: ${s.error}`, null, false);
+        showBanner(`Update failed: ${s.error}`, null, false);
         setTimeout(() => {
           if (updateBannerEl) updateBannerEl.classList.remove("visible");
         }, 5000);
@@ -491,6 +502,19 @@
   // ── Startup Programs Panel ──────────────────────────────────────────────────
   let startupItems = [];
   let startupLoading = false;
+
+  // Plain-language names for where a startup entry lives (sources from main.js)
+  const SOURCE_LABELS = {
+    "HKCU Run": "This user",
+    "HKCU RunOnce": "This user, runs once",
+    "HKLM Run": "All users",
+    "HKLM RunOnce": "All users, runs once",
+    "HKLM32 Run": "All users (32-bit)",
+    "HKCU Policies": "Set by policy",
+    "HKLM Policies": "Set by policy",
+    "Startup Folder": "Startup folder",
+    "Common Startup": "Startup folder, all users",
+  };
 
   function setStartupStatus(msg) {
     if (startupStatusEl) startupStatusEl.textContent = msg || "";
@@ -520,14 +544,9 @@
       row.className = "startupRow";
       row.dataset.id = item.id;
 
-      // Icon placeholder
       const icon = document.createElement("div");
       icon.className = "startupIcon";
-      const iconText = item.name.toLowerCase().includes("edge") ? "🌐" :
-        item.name.toLowerCase().includes("onedrive") ? "☁️" :
-          item.name.toLowerCase().includes("security") ? "🛡️" :
-            item.name.toLowerCase().includes("amd") || item.name.toLowerCase().includes("nvidia") ? "🎮" : "📦";
-      icon.textContent = iconText;
+      icon.textContent = (item.name.trim()[0] || "?").toUpperCase();
 
       const info = document.createElement("div");
       info.className = "startupInfo";
@@ -547,18 +566,11 @@
 
       const hiveEl = document.createElement("span");
       const source = item.source || item.hive || "";
-      hiveEl.className = `startupHive ${source.includes("HKLM") ? "system" : ""}`;
-      hiveEl.textContent = source;
-
-      // Simulated Impact for UX
-      const impact = document.createElement("span");
-      const isHigh = item.command.toLowerCase().includes("exe") && item.command.length > 50;
-      const isMed = item.command.toLowerCase().includes("background");
-      impact.className = `startupImpact ${isHigh ? "impact-high" : isMed ? "impact-low" : "impact-medium"}`;
-      impact.textContent = isHigh ? "High Impact" : isMed ? "Minimal" : "Measured";
+      hiveEl.className = "startupHive";
+      hiveEl.textContent = SOURCE_LABELS[source] || source;
+      hiveEl.title = item.registryKey || source;
 
       meta.appendChild(hiveEl);
-      meta.appendChild(impact);
 
       info.appendChild(nameEl);
       info.appendChild(cmdEl);
@@ -571,6 +583,8 @@
       chk.type = "checkbox";
       chk.checked = item.enabled;
       chk.disabled = !item.canToggle;
+      chk.setAttribute("aria-label", `Start ${item.name} with Windows`);
+      if (!item.canToggle) toggleLabel.title = "This entry can't be turned off from here.";
 
       toggleLabel.appendChild(chk);
 
