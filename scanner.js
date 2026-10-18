@@ -1,5 +1,7 @@
 "use strict";
-const fs   = require("fs");
+// original-fs treats .asar archives as plain files; Electron's patched fs would
+// walk into them and keep them open (locked) while the app runs.
+const fs   = (() => { try { return require("original-fs"); } catch (_) { return require("fs"); } })();
 const os   = require("os");
 const path = require("path");
 

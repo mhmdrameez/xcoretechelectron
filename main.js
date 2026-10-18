@@ -239,12 +239,14 @@ function toUniquePathList(input) {
 }
 
 // ── post-clean stat recalculation — batched parallel stat calls ───────────────
+// original-fs so .asar archives in scanned folders are stat-ed as files, not opened
+const rawFs = (() => { try { return require("original-fs"); } catch (_) { return fs; } })();
 const STAT_BATCH = 64;
 async function statBatch(paths) {
   const results = [];
   for (let start = 0; start < paths.length; start += STAT_BATCH) {
     const slice = paths.slice(start, start + STAT_BATCH);
-    const batch = await Promise.allSettled(slice.map(p => fs.promises.stat(p)));
+    const batch = await Promise.allSettled(slice.map(p => rawFs.promises.stat(p)));
     for (let i = 0; i < batch.length; i++) {
       if (batch[i].status === "fulfilled") results.push({ path: slice[i], stat: batch[i].value });
     }

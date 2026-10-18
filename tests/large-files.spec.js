@@ -78,6 +78,10 @@ test.describe('Large file finder (app)', () => {
     makeFile(path.join(fixture, 'big-video.mp4'), 120 * MB);
     makeFile(path.join(fixture, 'sub', 'old-installer.iso'), 60 * MB);
     makeFile(path.join(fixture, 'tiny.txt'), 100);
+    fs.mkdirSync(path.join(fixture, 'apps'), { recursive: true });
+    fs.copyFileSync(
+      path.join(__dirname, '..', 'node_modules', 'electron', 'dist', 'resources', 'default_app.asar'),
+      path.join(fixture, 'apps', 'app.asar'));
     electronApp = await electron.launch({ args: ['.'], env: { ...process.env, PLAYWRIGHT_TEST: '1' } });
     window = await electronApp.firstWindow();
   });
@@ -132,4 +136,18 @@ test.describe('Large file finder (app)', () => {
     expect(fs.existsSync(target)).toBe(false);
     expect(fs.existsSync(path.join(fixture, 'big-video.mp4'))).toBe(true);
   });
+
+  test('treats .asar archives as plain files and does not lock them', async () => {
+    const asar = path.join(fixture, 'apps', 'app.asar');
+    const r = await window.evaluate(() => window.api.largeScan('fixture', 1));
+    expect(r.ok).toBe(true);
+    const paths = r.items.map((i) => i.path);
+    expect(paths).toContain(asar);
+    expect(paths.some((p) => p.startsWith(asar + path.sep))).toBe(false);
+    expect(r.items.find((i) => i.path === asar).size).toBe(fs.statSync(asar).size);
+    // a file the app still holds open can't be renamed on Windows
+    fs.renameSync(asar, asar + '.moved');
+    fs.renameSync(asar + '.moved', asar);
+  });
 });
+
