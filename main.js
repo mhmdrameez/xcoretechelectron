@@ -45,6 +45,23 @@ const path = require("path");
 let _scanner  = null; const scanner  = () => (_scanner  ||= require(path.join(__dirname, "scanner.js")));
 let _cleaner  = null; const cleaner  = () => (_cleaner  ||= require(path.join(__dirname, "cleaner.js")));
 let _largeFiles = null; const largeFiles = () => (_largeFiles ||= require(path.join(__dirname, "largeFiles.js")));
+// one instance so clean() only touches what detect() found; test runs use a fixture
+let _devCaches = null;
+const devCaches = () => {
+  if (_devCaches) return _devCaches;
+  const mod = require(path.join(__dirname, "devCaches.js"));
+  if (process.env.PLAYWRIGHT_TEST) {
+    const fx = mod.getDevFixturePath();
+    _devCaches = mod.createDevCaches({
+      env: {}, localAppData: path.join(fx, "local"), userProfile: path.join(fx, "home"),
+      tempDir: path.join(fx, "temp"),
+      which: async () => null, run: async () => ({ ok: false, stdout: "", stderr: "", error: "disabled in tests" }),
+    });
+  } else {
+    _devCaches = mod.createDevCaches();
+  }
+  return _devCaches;
+};
 let _updater  = null; const updater  = () => (_updater  ||= require(path.join(__dirname, "updater.js")));
 
 
@@ -65,6 +82,7 @@ let tray             = null;
 let isQuitting       = false;
 let currentScanCancel = null;
 let largeScanCancel  = null;
+let devCacheBusy     = false;
 let largeSearchRoots = [];
 let lastLargeFiles   = new Map(); // lower-case path -> item, from the last large-file scan
 let lastScanResult   = { files: [], directories: [], totalBytes: 0 };
@@ -615,6 +633,57 @@ function setupIpc() {
     sendStatus(`${permanent ? "Deleted" : "Moved to Recycle Bin"}: ${removed.length} file(s), ${formatBytes(removedBytes)}.` +
       (failed.length ? ` ${failed.length} couldn't be removed.` : ""));
     return { ok: true, permanent, removed, removedBytes, failed };
+  });
+
+  // ── developer caches ───────────────────────────────────────────────────────
+  ipcMain.handle("dev:detect", async () => {
+    if (devCacheBusy) return { ok: false, error: "Already working." };
+    devCacheBusy = true;
+    sendStatus("Checking developer caches…");
+    try {
+      const targets = await devCaches().detect();
+      const total = targets.filter((t) => t.cleanable).reduce((n, t) => n + t.bytes, 0);
+      sendStatus(`Developer caches: ${formatBytes(total)} can be freed.`);
+      return { ok: true, targets };
+    } catch (e) {
+      return { ok: false, error: String(e.message || e), targets: [] };
+    } finally {
+      devCacheBusy = false;
+    }
+  });
+
+  ipcMain.handle("dev:clean", async (_e, ids) => {
+    if (devCacheBusy) return { ok: false, error: "Already working." };
+    const chosen = (Array.isArray(ids) ? ids : [])
+      .map((id) => devCaches().planned(String(id)))
+      .filter((t) => t && t.cleanable);
+    if (!chosen.length) return { ok: false, error: "Nothing selected." };
+
+    const total = chosen.reduce((n, t) => n + t.bytes, 0);
+    if (!process.env.PLAYWRIGHT_TEST) {
+      const res = await dialog.showMessageBox(mainWindow, {
+        type: "question", title: "Clean developer caches",
+        message: `Clean ${chosen.length} cache(s), up to ${formatBytes(total)}?`,
+        detail: chosen.map((t) => `• ${t.name}`).join("\n") +
+          "\n\nThese are downloads and leftovers. Your tools fetch anything they need again.",
+        buttons: ["Cancel", "Clean"], defaultId: 1, cancelId: 0, noLink: true,
+      });
+      if (res.response !== 1) return { ok: false, cancelled: true };
+    }
+
+    devCacheBusy = true;
+    sendStatus("Cleaning developer caches…");
+    try {
+      const results = await devCaches().clean(chosen.map((t) => t.id), (p) => send("dev:progress", p));
+      const freed = results.reduce((n, r) => n + (r.freedBytes || 0), 0);
+      const failed = results.filter((r) => !r.ok).length;
+      sendStatus(`Developer caches: freed ${formatBytes(freed)}.` + (failed ? ` ${failed} couldn't be fully cleaned.` : ""));
+      return { ok: true, results, freedBytes: freed };
+    } catch (e) {
+      return { ok: false, error: String(e.message || e) };
+    } finally {
+      devCacheBusy = false;
+    }
   });
 
   ipcMain.handle("scan:cancel", () => {

@@ -37,6 +37,10 @@ contextBridge.exposeInMainWorld("api", {
   largeReveal:        (filePath)    => ipcRenderer.invoke("large:reveal", filePath),
   largeDelete:        (paths, permanent) => ipcRenderer.invoke("large:delete", { paths, permanent: !!permanent }),
 
+  // ── developer caches ─────────────────────────────────────────────────────
+  devDetect:          ()            => ipcRenderer.invoke("dev:detect"),
+  devClean:           (ids)         => ipcRenderer.invoke("dev:clean", ids),
+
   // ── technician ───────────────────────────────────────────────────────────
   techInternetFix:    ()            => ipcRenderer.invoke("tech:internetFix"),
   techRamBoost:       ()            => ipcRenderer.invoke("tech:ramBoost"),
@@ -57,4 +61,5 @@ contextBridge.exposeInMainWorld("api", {
   onUpdateStatus:     (fn) => on("update:status",    fn),
   onTechProgress:     (fn) => on("tech:progress",    fn),
   onLargeProgress:    (fn) => on("large:progress",   fn),
+  onDevProgress:      (fn) => on("dev:progress",     fn),
 });

@@ -119,6 +119,37 @@
       </div>
     </section>
 
+    <!-- Developer caches -->
+    <section class="card" id="devSection">
+      <div class="sectionHead">
+        <h2>Developer caches</h2>
+        <div class="actions">
+          <button id="devCheckBtn" class="btn small">Check</button>
+          <button id="devCleanBtn" class="btn small primary" disabled>Clean selected</button>
+        </div>
+      </div>
+      <p class="muted sectionNote">Download caches from npm, pnpm, pip, uv and conda, old temp files and unused test browsers. Your tools download anything they need again.</p>
+
+      <div class="devTable">
+        <div class="devHead">
+          <label class="largeCheck"><input type="checkbox" id="devSelectAll" aria-label="Select all caches"></label>
+          <span></span>
+          <span>Cache</span>
+          <span>Status</span>
+          <span class="num">Items</span>
+          <span class="num">Size</span>
+          <span class="num">Freed</span>
+        </div>
+        <div id="devList" class="devList">
+          <div class="largeEmpty">Click Check to measure your developer caches.</div>
+        </div>
+        <div class="largeFoot">
+          <span id="devStatus" class="muted small"></span>
+          <span id="devTotal" class="small devTotal">Can be freed: 0 B</span>
+        </div>
+      </div>
+    </section>
+
     <!-- History -->
     <section class="card">
       <h2>So far</h2>

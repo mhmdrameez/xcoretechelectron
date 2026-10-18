@@ -864,6 +864,178 @@
     loadLargeRoots();
   }
 
+  // ── Developer caches ────────────────────────────────────────────────────────
+  const devCheckBtn = el("devCheckBtn");
+  const devCleanBtn = el("devCleanBtn");
+  const devListEl = el("devList");
+  const devSelectAllEl = el("devSelectAll");
+  const devStatusEl = el("devStatus");
+  const devTotalEl = el("devTotal");
+
+  let devTargets = [];
+  const devSelected = new Set();
+  const devFreed = new Map(); // id -> bytes freed this session
+  let devBusy = false;
+
+  const DEV_STATUS = {
+    found: ["Found", "found"],
+    nothing: ["Nothing found", ""],
+    "needs-tool": ["Can't clean", "warn"],
+    error: ["Couldn't check", "warn"],
+    cleaning: ["Cleaning…", "found"],
+    cleaned: ["Cleaned", "done"],
+  };
+
+  function setDevStatus(t) { if (devStatusEl) devStatusEl.textContent = t || ""; }
+
+  function updateDevSelection() {
+    const cleanable = devTargets.filter((t) => t.cleanable);
+    let bytes = 0;
+    for (const t of cleanable) if (devSelected.has(t.id)) bytes += t.bytes;
+    if (devTotalEl) devTotalEl.textContent = `Selected: ${formatBytes(bytes)}`;
+    if (devCleanBtn) devCleanBtn.disabled = devBusy || !devSelected.size;
+    if (devCheckBtn) devCheckBtn.disabled = devBusy;
+    if (devSelectAllEl) {
+      devSelectAllEl.disabled = devBusy || !cleanable.length;
+      devSelectAllEl.checked = cleanable.length > 0 && devSelected.size === cleanable.length;
+      devSelectAllEl.indeterminate = devSelected.size > 0 && devSelected.size < cleanable.length;
+    }
+  }
+
+  function renderDevList(cleaningId) {
+    if (!devListEl) return;
+    devListEl.textContent = "";
+    const frag = document.createDocumentFragment();
+    for (const t of devTargets) {
+      const row = document.createElement("div");
+      row.className = "devRow";
+      row.dataset.id = t.id;
+
+      const checkWrap = document.createElement("label");
+      checkWrap.className = "largeCheck";
+      const chk = document.createElement("input");
+      chk.type = "checkbox";
+      chk.checked = devSelected.has(t.id);
+      chk.disabled = devBusy || !t.cleanable;
+      chk.setAttribute("aria-label", `Select ${t.name}`);
+      checkWrap.appendChild(chk);
+
+      const badge = document.createElement("div");
+      badge.className = "devBadge";
+      badge.style.background = t.color;
+      badge.textContent = t.badge;
+
+      const info = document.createElement("div");
+      info.style.minWidth = "0";
+      const name = document.createElement("div");
+      name.className = "devName";
+      name.textContent = t.name;
+      const desc = document.createElement("div");
+      desc.className = "devDesc";
+      desc.textContent = t.note || t.desc;
+      desc.title = t.path ? `${t.note || t.desc}\n${t.path}` : (t.note || t.desc);
+      info.append(name, desc);
+
+      const statusKey = t.id === cleaningId ? "cleaning" : (devFreed.has(t.id) && !t.cleanable ? "cleaned" : t.status);
+      const [label, cls] = DEV_STATUS[statusKey] || [statusKey, ""];
+      const pill = document.createElement("span");
+      pill.className = `pill ${cls}`;
+      pill.textContent = label;
+
+      const items = document.createElement("span");
+      items.className = "num";
+      items.textContent = t.items == null ? "–" : Number(t.items).toLocaleString();
+
+      const size = document.createElement("span");
+      size.className = "num";
+      size.textContent = formatBytes(t.bytes);
+
+      const freed = document.createElement("span");
+      freed.className = "num devFreed";
+      freed.textContent = devFreed.has(t.id) ? formatBytes(devFreed.get(t.id)) : "";
+
+      row.append(checkWrap, badge, info, pill, items, size, freed);
+      frag.appendChild(row);
+    }
+    devListEl.appendChild(frag);
+    updateDevSelection();
+  }
+
+  async function runDevCheck() {
+    if (devBusy) return;
+    devBusy = true;
+    updateDevSelection();
+    setDevStatus("Checking…");
+    try {
+      const r = await window.api.devDetect();
+      if (!r || !r.ok) { setDevStatus(r && r.error ? r.error : "Couldn't check the caches."); return; }
+      devTargets = Array.isArray(r.targets) ? r.targets : [];
+      devSelected.clear();
+      for (const t of devTargets) if (t.cleanable) devSelected.add(t.id);
+      const total = devTargets.filter((t) => t.cleanable).reduce((n, t) => n + t.bytes, 0);
+      setDevStatus(total ? `${formatBytes(total)} can be freed.` : "Nothing to clean. Your caches are tidy.");
+      trackActivity("dev_check", formatBytes(total));
+    } catch (_) {
+      setDevStatus("Couldn't check the caches.");
+    } finally {
+      devBusy = false;
+      renderDevList();
+    }
+  }
+
+  async function runDevClean() {
+    if (devBusy || !devSelected.size) return;
+    const ids = devTargets.filter((t) => devSelected.has(t.id)).map((t) => t.id);
+    devBusy = true;
+    renderDevList();
+    setDevStatus("Cleaning…");
+    try {
+      const r = await window.api.devClean(ids);
+      if (!r || r.cancelled) { setDevStatus(""); return; }
+      if (!r.ok) { setDevStatus(r.error || "Couldn't clean."); return; }
+      for (const res of r.results || []) {
+        devFreed.set(res.id, (devFreed.get(res.id) || 0) + (res.freedBytes || 0));
+        const i = devTargets.findIndex((t) => t.id === res.id);
+        if (i >= 0 && res.target) devTargets[i] = res.target;
+        devSelected.delete(res.id);
+      }
+      const failed = (r.results || []).filter((x) => !x.ok);
+      setDevStatus(`Freed ${formatBytes(r.freedBytes || 0)}.` +
+        (failed.length ? ` ${failed.length} couldn't be fully cleaned: ${failed[0].error}` : ""));
+      trackActivity("dev_clean", formatBytes(r.freedBytes || 0));
+    } catch (_) {
+      setDevStatus("Couldn't clean.");
+    } finally {
+      devBusy = false;
+      renderDevList();
+    }
+  }
+
+  function initDevCaches() {
+    if (!window.api.devDetect || !devListEl) {
+      const section = el("devSection");
+      if (section) section.hidden = true;
+      return;
+    }
+    if (devCheckBtn) devCheckBtn.addEventListener("click", runDevCheck);
+    if (devCleanBtn) devCleanBtn.addEventListener("click", runDevClean);
+    if (devSelectAllEl) devSelectAllEl.addEventListener("change", () => {
+      devSelected.clear();
+      if (devSelectAllEl.checked) for (const t of devTargets) if (t.cleanable) devSelected.add(t.id);
+      renderDevList();
+    });
+    devListEl.addEventListener("change", (e) => {
+      const row = e.target.closest(".devRow");
+      if (!row || e.target.type !== "checkbox") return;
+      if (e.target.checked) devSelected.add(row.dataset.id);
+      else devSelected.delete(row.dataset.id);
+      updateDevSelection();
+    });
+    if (window.api.onDevProgress) window.api.onDevProgress((p) => {
+      if (p && p.phase === "cleaning") renderDevList(p.id);
+    });
+  }
+
   // ── init ───────────────────────────────────────────────────────────────────
   function init() {
     setButtons();
@@ -872,6 +1044,7 @@
     refreshAutoStart();
     loadStartupPrograms(); // Auto-load on init
     initLargeFiles();
+    initDevCaches();
 
     // Stats from main process (in-memory, no file read needed now)
     window.api.getStats().then(r => { if (r && r.ok && r.stats) updateImpactCards(r.stats); }).catch(() => { });

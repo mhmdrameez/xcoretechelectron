@@ -51,6 +51,7 @@
       "updater.js",
       "technician.js",
       "largeFiles.js",
+      "devCaches.js",
       "index.html",
       "styles.css",
       "assets/**/*"

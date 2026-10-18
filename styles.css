@@ -237,6 +237,29 @@ h2 { font-size: 15px; font-weight: 600; margin-bottom: 8px; }
 .largeFoot { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 12px; border-top: 1px solid var(--line); }
 .largeEmpty { padding: 16px; text-align: center; color: var(--muted); font-size: 13px; }
 
+/* developer caches */
+.devTable { border: 1px solid var(--line); border-radius: var(--radius); }
+.devHead, .devRow {
+  display: grid; grid-template-columns: 28px 34px minmax(0, 1fr) 112px 56px 76px 76px;
+  align-items: center; gap: 8px; padding: 7px 12px;
+}
+.devHead { font-size: 12px; color: var(--muted); border-bottom: 1px solid var(--line); background: var(--card-alt); border-radius: var(--radius) var(--radius) 0 0; }
+.devRow + .devRow { border-top: 1px solid var(--line); }
+.devRow .num, .devHead .num { text-align: right; font-variant-numeric: tabular-nums; font-size: 13px; }
+.devHead .num { font-size: 12px; }
+.devBadge {
+  width: 30px; height: 30px; border-radius: 6px; display: grid; place-items: center;
+  color: #fff; font-size: 11px; font-weight: 700; letter-spacing: -.02em;
+}
+.devName { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.devDesc { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pill { justify-self: start; font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line-strong); color: var(--muted); white-space: nowrap; }
+.pill.found { color: var(--accent); border-color: var(--accent); }
+.pill.done { color: var(--ok); border-color: var(--ok); }
+.pill.warn { color: var(--warn); border-color: var(--warn); }
+.devFreed { color: var(--ok); font-weight: 600; }
+.devTotal { font-weight: 600; }
+
 /* footer */
 .footer { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); padding: 4px 2px 0; }
 
@@ -280,6 +303,8 @@ body.busy .busyOverlay { display: flex; }
   .history { grid-template-columns: repeat(2, 1fr); }
   .largeHead, .largeRow { grid-template-columns: 28px minmax(0, 1fr) 76px 84px; }
   .largeColDate, .largeDate { display: none; }
+  .devHead, .devRow { grid-template-columns: 28px 34px minmax(0, 1fr) 100px 70px 70px; }
+  .devHead > :nth-child(5), .devRow > :nth-child(5) { display: none; }
   .cleanupTop { flex-direction: column; }
 }
 
