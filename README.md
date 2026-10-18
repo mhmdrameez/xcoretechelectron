@@ -25,6 +25,14 @@ Each [release](https://github.com/mhmdrameez/xcoretechelectron/releases) has:
 - **macOS**: `.dmg` for Apple Silicon (`arm64`) and Intel (`x64`). The app isn't signed with an Apple Developer ID yet, so the first time, right-click the app and choose **Open**.
 - **Linux**: `.AppImage` (any distro), `.deb` (Ubuntu, Debian, Mint, Pop!_OS) and `.rpm` (Fedora, openSUSE, RHEL)
 
+On macOS or Linux, one command picks the right file and installs it:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/mhmdrameez/xcoretechelectron/main/install.sh | bash
+```
+
+On macOS it copies the app to `/Applications`. On Linux it uses apt, dnf, yum or zypper when it finds them, otherwise it puts the AppImage in `~/.local/bin` with a menu entry. Set `XCORETECH_FORMAT=appimage` (or `deb`, `rpm`) to choose, `XCORETECH_VERSION=1.3.33` to pin a version, or `XCORETECH_DRY_RUN=1` to see what it would do.
+
 ## Architecture
 
 ```text
@@ -46,6 +54,7 @@ xcoretechelectron/
 |-- updater.js        # Auto-updater
 |-- styles.css        # App styling
 |-- index.html        # App UI shell
+|-- install.sh        # One-line installer for macOS and Linux
 |-- installer/        # NSIS include and macOS after-pack signing hook
 `-- .github/workflows # CI tests on all three OSes, and the release build
 ```
