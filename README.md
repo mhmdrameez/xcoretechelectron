@@ -1,6 +1,10 @@
 # XCoreTech PC Optimizer
 
-A desktop cleaner for Windows, macOS and Linux, built with Electron.
+A free, open-source desktop cleaner for Windows, macOS and Linux, built with Electron.
+
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE) [![Tests](https://github.com/mhmdrameez/xcoretechelectron/actions/workflows/ci.yml/badge.svg)](https://github.com/mhmdrameez/xcoretechelectron/actions/workflows/ci.yml) [![Latest release](https://img.shields.io/github/v/release/mhmdrameez/xcoretechelectron)](https://github.com/mhmdrameez/xcoretechelectron/releases/latest)
+
+Website: https://xcoretech.vercel.app/
 
 ## Features
 
@@ -84,6 +88,12 @@ Releases are built by GitHub Actions on Windows, macOS and Linux machines; no pe
 
 To build locally instead: `npx electron-builder --win` (or `--mac` on a Mac, `--linux` on Linux).
 
+## Contributing
+
+Bug reports, ideas, testing and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for how to run the app from source, run the tests and send a change.
+
 ## License
 
-Proprietary License. Copyright 2024 XCoreTech Team.
+Copyright (C) 2024-2026 XCoreTech Team.
+
+XCoreTech PC Optimizer is free software: you can redistribute it and/or modify it under the terms of the [GNU General Public License](LICENSE) as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
