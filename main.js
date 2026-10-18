@@ -56,7 +56,8 @@ const devCaches = () => {
   if (process.env.PLAYWRIGHT_TEST) {
     const fx = mod.getDevFixturePath();
     _devCaches = mod.createDevCaches({
-      env: {}, localAppData: path.join(fx, "local"), userProfile: path.join(fx, "home"),
+      // the fixture uses the Windows folder layout on every OS
+      platform: "win32", env: {}, localAppData: path.join(fx, "local"), userProfile: path.join(fx, "home"),
       tempDir: path.join(fx, "temp"),
       which: async () => null, run: async () => ({ ok: false, stdout: "", stderr: "", error: "disabled in tests" }),
     });

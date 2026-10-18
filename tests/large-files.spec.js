@@ -7,6 +7,16 @@ const { findLargeFiles, isSkippedDir, getFixturePath } = require('../largeFiles.
 
 const MB = 1024 * 1024;
 
+// Electron's own default_app.asar: <dist>/resources on Windows/Linux,
+// Electron.app/Contents/Resources on macOS
+function defaultAppAsar() {
+  const exe = require('electron'); // in Node this is the path to the Electron binary
+  const resources = process.platform === 'darwin'
+    ? path.join(path.dirname(exe), '..', 'Resources')
+    : path.join(path.dirname(exe), 'resources');
+  return path.join(resources, 'default_app.asar');
+}
+
 // fs.truncate makes a file of the given size without writing the bytes
 function makeFile(p, size) {
   fs.mkdirSync(path.dirname(p), { recursive: true });
@@ -80,7 +90,7 @@ test.describe('Large file finder (app)', () => {
     makeFile(path.join(fixture, 'tiny.txt'), 100);
     fs.mkdirSync(path.join(fixture, 'apps'), { recursive: true });
     fs.copyFileSync(
-      path.join(__dirname, '..', 'node_modules', 'electron', 'dist', 'resources', 'default_app.asar'),
+      defaultAppAsar(),
       path.join(fixture, 'apps', 'app.asar'));
     electronApp = await electron.launch({ args: ['.'], env: { ...process.env, PLAYWRIGHT_TEST: '1' } });
     window = await electronApp.firstWindow();

@@ -28,17 +28,22 @@ jobs:
       - name: Install the browser used by the UI tests
         run: npx playwright install ${{ runner.os == 'Linux' && '--with-deps ' || '' }}chromium-headless-shell
 
+      # Electron's sandbox helper must be owned by root with the setuid bit, as
+      # the .deb/.rpm installers set it up; npm can't do that on its own.
+      - name: Set up Electron's sandbox helper (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo chown root:root node_modules/electron/dist/chrome-sandbox
+          sudo chmod 4755 node_modules/electron/dist/chrome-sandbox
+
+      # the "github" reporter turns each failing test into an annotation on the run
       - name: Run tests (Linux, virtual display)
         if: runner.os == 'Linux'
-        # GitHub's Ubuntu images block Electron's sandbox helper; tests run
-        # without it. Real installs keep the sandbox.
-        env:
-          ELECTRON_DISABLE_SANDBOX: "1"
-        run: xvfb-run -a npm run test:ci
+        run: xvfb-run -a npm run test:ci -- --reporter=github,list
 
       - name: Run tests
         if: runner.os != 'Linux'
-        run: npm run test:ci
+        run: npm run test:ci -- --reporter=github,list
 
       - name: Upload test results
         if: failure()
