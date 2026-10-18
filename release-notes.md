@@ -1,1 +1,6 @@
-🚀 This is an auto-generated build of XCoreTech Cleaner (Version 1.3.30) created during the latest distribution process. Each time you run npm run dist, a new build version is generated to include the latest updates, improvements, and fixes. This ensures every release is uniquely identifiable and helps track changes across versions. We recommend using the latest build for the best performance, stability, and feature set. Thank you for using XCoreTech Cleaner and staying up to date with continuous improvements.
+What's new in 1.3.31
+
+- Developer caches: check and clean the npm, pnpm, pip, uv and conda caches, Temp files nobody has touched for a week, and Playwright test browsers no project uses. pnpm and conda are only cleaned with their own tools, so packages still in use are kept.
+- Large files: find the biggest files in your user folder or on a whole drive, open their folder, and move them to the Recycle Bin or delete them permanently. Windows and program folders are left out.
+- A simpler look that follows your Windows light or dark theme, and a new app icon.
+- Fixed: searching folders that contain Electron app archives (.asar) no longer lists files that don't exist or keeps those archives locked.
